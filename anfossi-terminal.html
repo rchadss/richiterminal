@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anfossi's Terminal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0d0d0f;color:#e0e0e0;font-family:'Courier New',monospace;font-size:13px;overflow-x:hidden;}
+
+/* ── HEADER ── */
+.term-header{background:#111215;border-bottom:2px solid #f59e0b;padding:8px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;}
+.logo{color:#f59e0b;font-size:19px;font-weight:bold;letter-spacing:3px;}
+.logo-sub{color:#555;font-size:9px;letter-spacing:3px;margin-top:2px;}
+.hdr-right{display:flex;gap:22px;align-items:center;}
+.hdr-block{text-align:right;}
+.hdr-label{color:#555;font-size:9px;letter-spacing:1px;}
+.hdr-val{color:#f59e0b;font-size:12px;font-weight:bold;}
+.live-dot{display:inline-block;width:7px;height:7px;background:#22c55e;border-radius:50%;animation:pulse 1.8s infinite;margin-right:4px;vertical-align:middle;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+/* ── TICKER ── */
+.ticker-wrap{background:#0a0a0c;border-bottom:1px solid #222;padding:5px 0;overflow:hidden;white-space:nowrap;}
+.ticker-track{display:inline-flex;animation:scroll 70s linear infinite;}
+.ticker-track:hover{animation-play-state:paused;}
+.t-item{display:inline-flex;gap:7px;padding:0 22px;border-right:1px solid #222;align-items:center;}
+.t-sym{color:#f59e0b;font-weight:bold;font-size:11px;letter-spacing:.5px;}
+.t-val{color:#fff;font-size:11px;}
+.t-chg{font-size:10px;}
+@keyframes scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+
+/* ── TABS ── */
+.tab-bar{background:#111215;border-bottom:1px solid #222;display:flex;overflow-x:auto;position:sticky;top:50px;z-index:99;}
+.tab-bar::-webkit-scrollbar{height:3px;}
+.tab-bar::-webkit-scrollbar-thumb{background:#333;}
+.tab{padding:10px 18px;cursor:pointer;color:#666;border-bottom:2px solid transparent;font-size:11px;letter-spacing:.8px;white-space:nowrap;transition:.15s;}
+.tab:hover{color:#f59e0b;}
+.tab.on{color:#f59e0b;border-bottom-color:#f59e0b;background:#161618;}
+
+/* ── PANELS ── */
+.panels{padding:14px;max-height:calc(100vh - 96px);overflow-y:auto;}
+.panels::-webkit-scrollbar{width:5px;}
+.panels::-webkit-scrollbar-thumb{background:#333;border-radius:3px;}
+.panel{display:none;}
+.panel.on{display:block;}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+@media(max-width:1300px){.g6{grid-template-columns:repeat(3,1fr);}.g4{grid-template-columns:repeat(2,1fr);}.g5{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:900px){.g2,.g3{grid-template-columns:1fr;}.g4,.g5,.g6{grid-template-columns:repeat(2,1fr);}}
+
+/* ── CARDS ── */
+.card{background:#141416;border:1px solid #252528;border-radius:4px;padding:12px;}
+.ch{color:#f59e0b;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #222;}
+.sep{height:14px;}
+
+/* ── INDEX CARD ── */
+.idx-card{background:#141416;border:1px solid #252528;border-radius:4px;padding:10px 12px;text-align:center;}
+.idx-flag{font-size:18px;margin-bottom:3px;}
+.idx-name{color:#666;font-size:9px;letter-spacing:.8px;}
+.idx-val{color:#fff;font-size:17px;font-weight:bold;margin:4px 0 2px;}
+.idx-chg{font-size:11px;}
+
+/* ── SECTION TITLE ── */
+.stitle{color:#f59e0b;font-size:10px;letter-spacing:2px;text-transform:uppercase;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #222;}
+
+/* ── TABLE ── */
+.dt{width:100%;border-collapse:collapse;font-size:11px;}
+.dt th{background:#1a1a1d;color:#f59e0b;padding:7px 8px;text-align:left;font-size:9px;letter-spacing:1px;border-bottom:1px solid #2a2a2d;}
+.dt td{padding:6px 8px;border-bottom:1px solid #1c1c1f;color:#ccc;}
+.dt tr:hover td{background:#1a1a1d;}
+.dt td:first-child{color:#e0e0e0;}
+
+/* ── RATE ROW ── */
+.rr{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a1a1d;}
+.rl{color:#666;font-size:10px;}
+.rv{color:#e0e0e0;font-weight:bold;font-size:11px;}
+
+/* ── CHART ── */
+.ch-box{position:relative;}
+.ch-sm{height:160px;}
+.ch-md{height:210px;}
+.ch-lg{height:240px;}
+
+/* ── COLOR UTILS ── */
+.up{color:#22c55e;}
+.dn{color:#ef4444;}
+.am{color:#f59e0b;}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:bold;letter-spacing:.5px;}
+.bg{background:#14532d;color:#22c55e;}
+.br{background:#7f1d1d;color:#ef4444;}
+.by{background:#78350f;color:#f59e0b;}
+.bb{background:#1e3a5f;color:#60a5fa;}
+
+/* ── COUNTRY BANNER ── */
+.c-banner{display:flex;align-items:center;gap:14px;padding:12px 14px;background:#141416;border:1px solid #252528;border-left:4px solid #f59e0b;border-radius:4px;margin-bottom:14px;flex-wrap:wrap;}
+.c-flag{font-size:34px;}
+.c-info h2{color:#f59e0b;font-size:15px;letter-spacing:1px;}
+.c-info p{color:#555;font-size:10px;margin-top:2px;}
+.c-kpis{margin-left:auto;display:flex;gap:24px;flex-wrap:wrap;}
+.c-kpi{text-align:right;}
+.c-kpi-l{color:#555;font-size:9px;letter-spacing:.8px;}
+.c-kpi-v{color:#fff;font-size:15px;font-weight:bold;}
+
+/* ── FX CARD ── */
+.fx-card{background:#141416;border:1px solid #252528;border-radius:4px;padding:10px;text-align:center;}
+.fx-pair{color:#f59e0b;font-size:10px;letter-spacing:1px;}
+.fx-rate{color:#fff;font-size:17px;font-weight:bold;margin:5px 0 3px;}
+.fx-chg{font-size:10px;}
+
+/* ── INSIGHT BOX ── */
+.ibox{background:#141416;border:1px solid #252528;border-left:3px solid #f59e0b;border-radius:4px;padding:12px;margin-bottom:10px;}
+.ibox-title{color:#f59e0b;font-size:10px;letter-spacing:.8px;margin-bottom:6px;font-weight:bold;}
+.ibox-body{color:#aaa;font-size:11px;line-height:1.7;}
+.ibox-body strong{color:#e0e0e0;}
+
+/* ── RISK CARDS ── */
+.risk-card{background:#141416;border:1px solid #252528;border-radius:4px;padding:12px;}
+.risk-title{font-size:10px;letter-spacing:1px;margin-bottom:8px;font-weight:bold;padding-bottom:6px;border-bottom:1px solid #222;}
+.risk-list{font-size:11px;color:#bbb;line-height:1.9;}
+
+/* ── COPPER HIGHLIGHT ── */
+.copper-box{background:#141416;border:1px solid #252528;border-left:4px solid #f59e0b;border-radius:4px;padding:14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+.copper-price-big{font-size:38px;color:#fff;font-weight:bold;}
+.copper-unit{font-size:16px;color:#555;margin-left:4px;}
+.copper-badge{font-size:14px;margin-left:12px;}
+
+/* ── NEWS FEED ── */
+.nf-btn{background:#1a1a1d;border:1px solid #333;color:#888;padding:4px 10px;font-size:10px;letter-spacing:.8px;cursor:pointer;border-radius:3px;font-family:'Courier New',monospace;}
+.nf-btn:hover{color:#f59e0b;border-color:#f59e0b;}
+.nf-btn.on{color:#f59e0b;border-color:#f59e0b;background:#1f1a0f;}
+.nf-ref{background:transparent;border:1px solid #333;color:#555;padding:4px 10px;font-size:10px;cursor:pointer;border-radius:3px;font-family:'Courier New',monospace;letter-spacing:.8px;}
+.nf-ref:hover{color:#22c55e;border-color:#22c55e;}
+.src-link{display:inline-block;padding:6px 14px;background:#161618;border:1px solid #2a2a2e;color:#aaa;text-decoration:none;font-size:11px;letter-spacing:.5px;border-radius:3px;transition:.15s;}
+.src-link:hover{color:#f59e0b;border-color:#f59e0b;background:#1f1a0f;}
+.news-card{background:#141416;border:1px solid #252528;border-left:3px solid #333;border-radius:4px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:.15s;}
+.news-card:hover{border-left-color:#f59e0b;background:#1a1a1d;}
+.news-card.markets{border-left-color:#f59e0b;}
+.news-card.economy{border-left-color:#60a5fa;}
+.news-card.chile{border-left-color:#22c55e;}
+.news-card.switzerland{border-left-color:#a78bfa;}
+.news-card.commodities{border-left-color:#fb923c;}
+.news-title{color:#e0e0e0;font-size:12px;line-height:1.5;margin-bottom:5px;font-weight:bold;}
+.news-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.news-source{color:#f59e0b;font-size:9px;letter-spacing:.8px;}
+.news-time{color:#444;font-size:9px;}
+.news-tag{font-size:9px;padding:1px 6px;border-radius:2px;background:#1f1a0f;color:#f59e0b;letter-spacing:.5px;}
+.news-summary{color:#666;font-size:10px;margin-top:5px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.src-block{background:#141416;border:1px solid #252528;border-radius:4px;padding:10px 12px;margin-bottom:8px;}
+.src-name{color:#f59e0b;font-size:10px;letter-spacing:1px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #1f1f22;}
+.src-item{padding:5px 0;border-bottom:1px solid #1a1a1d;cursor:pointer;}
+.src-item:last-child{border-bottom:none;}
+.src-item:hover .src-headline{color:#f59e0b;}
+.src-headline{color:#ccc;font-size:11px;line-height:1.4;}
+.src-when{color:#444;font-size:9px;margin-top:2px;}
+.news-spinner{color:#555;font-size:11px;padding:20px 0;text-align:center;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:#0d0d0f;}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px;}
+
+/* ── DISCLAIMER ── */
+.disc{color:#444;font-size:9px;margin-top:16px;padding-top:10px;border-top:1px solid #1a1a1d;line-height:1.6;}
+
+/* ── RATE BOX BIG ── */
+.rate-big-box{text-align:center;padding:10px 0;}
+.rate-big{font-size:30px;color:#f59e0b;font-weight:bold;}
+.rate-big-sub{color:#555;font-size:10px;margin-top:4px;}
+
+/* ── MACRO TABLE WRAPPER ── */
+.macro-wrap{overflow-x:auto;}
+</style>
+</head>
+<body>
+
+<!-- ══════════ HEADER ══════════ -->
+<div class="term-header">
+  <div>
+    <div class="logo">⬡ ANFOSSI'S TERMINAL</div>
+    <div class="logo-sub">FINANCIAL INTELLIGENCE PLATFORM — anfossiterminal.com</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-block">
+      <div class="hdr-label">MARKET STATUS</div>
+      <div class="hdr-val" id="mkt-status">⬤ CHECKING…</div>
+    </div>
+    <div class="hdr-block">
+      <div class="hdr-label">NEW YORK</div>
+      <div class="hdr-val" id="t-ny">--:--:--</div>
+    </div>
+    <div class="hdr-block">
+      <div class="hdr-label">ZÜRICH</div>
+      <div class="hdr-val" id="t-zh">--:--:--</div>
+    </div>
+    <div class="hdr-block">
+      <div class="hdr-label">SANTIAGO</div>
+      <div class="hdr-val" id="t-sc">--:--:--</div>
+    </div>
+    <div class="hdr-block">
+      <div class="hdr-label">CIUDAD DE MÉXICO</div>
+      <div class="hdr-val" id="t-mx">--:--:--</div>
+    </div>
+    <div class="hdr-block">
+      <div class="hdr-label">FX DATA</div>
+      <div class="hdr-val"><span class="live-dot"></span>LIVE</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TICKER ══════════ -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker"></div>
+</div>
+
+<!-- ══════════ TABS ══════════ -->
+<div class="tab-bar">
+  <div class="tab on"  onclick="show('global',this)">🌍 GLOBAL</div>
+  <div class="tab"     onclick="show('us',this)">🇺🇸 UNITED STATES</div>
+  <div class="tab"     onclick="show('ch',this)">🇨🇭 SWITZERLAND</div>
+  <div class="tab"     onclick="show('cl',this)">🇨🇱 CHILE</div>
+  <div class="tab"     onclick="show('mx',this)">🇲🇽 MEXICO</div>
+  <div class="tab"     onclick="show('fx',this)">💱 FX &amp; CURRENCIES</div>
+  <div class="tab"     onclick="show('macro',this)">📊 MACRO ECONOMICS</div>
+  <div class="tab"     onclick="show('insight',this)">💡 INVESTMENT INSIGHTS</div>
+  <div class="tab"     onclick="show('news',this);if(!window._newsLoaded){window._newsLoaded=true;loadAllNews();}">📰 NEWS FEED</div>
+  <div class="tab"     onclick="show('drone',this)">🚁 DRONE &amp; MOBILITY</div>
+</div>
+
+<!-- ══════════ PANELS ══════════ -->
+<div class="panels">
+
+<!-- ─────── GLOBAL ─────── -->
+<div class="panel on" id="p-global">
+  <div class="stitle">MAJOR GLOBAL INDICES</div>
+  <div class="g6" id="idx-grid"></div>
+
+  <div class="sep"></div>
+  <div class="g2">
+    <div>
+      <div class="stitle">PERFORMANCE VS 30-DAY BASE (INDEXED)</div>
+      <div class="card"><div class="ch-box ch-lg"><canvas id="c-global"></canvas></div></div>
+    </div>
+    <div>
+      <div class="stitle">COMMODITIES SNAPSHOT</div>
+      <div class="card">
+        <table class="dt">
+          <thead><tr><th>COMMODITY</th><th>PRICE</th><th>DAY</th><th>YTD</th></tr></thead>
+          <tbody id="comm-tbody"></tbody>
+        </table>
+        <div class="sep" style="height:10px;"></div>
+        <div class="ch-box ch-sm"><canvas id="c-comm"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="stitle">GLOBAL CENTRAL BANK POLICY RATES</div>
+  <div class="g5">
+    <div class="card">
+      <div class="ch">🇺🇸 FED FUNDS RATE</div>
+      <div class="rate-big-box"><div class="rate-big">4.25%</div><div class="rate-big-sub">Target Range: 4.25 – 4.50%</div></div>
+      <div class="rr"><span class="rl">Next FOMC</span><span class="rv">Jun 17–18, 2026</span></div>
+      <div class="rr"><span class="rl">Market Pricing</span><span class="rv"><span class="badge by">HOLD</span></span></div>
+      <div class="rr"><span class="rl">Rate Cycle</span><span class="rv">Peak — Easing Ahead</span></div>
+    </div>
+    <div class="card">
+      <div class="ch">🇨🇭 SNB POLICY RATE</div>
+      <div class="rate-big-box"><div class="rate-big">0.25%</div><div class="rate-big-sub">Swiss National Bank</div></div>
+      <div class="rr"><span class="rl">Next Meeting</span><span class="rv">Jun 19, 2026</span></div>
+      <div class="rr"><span class="rl">Market Pricing</span><span class="rv"><span class="badge bg">CUT POSSIBLE</span></span></div>
+      <div class="rr"><span class="rl">CHF vs USD YTD</span><span class="rv up">CHF +1.2%</span></div>
+    </div>
+    <div class="card">
+      <div class="ch">🇨🇱 BCCh POLICY RATE</div>
+      <div class="rate-big-box"><div class="rate-big">4.75%</div><div class="rate-big-sub">Banco Central de Chile</div></div>
+      <div class="rr"><span class="rl">Next Decision</span><span class="rv">Jun 2026</span></div>
+      <div class="rr"><span class="rl">Trend</span><span class="rv"><span class="badge bg">↓ CUTTING CYCLE</span></span></div>
+      <div class="rr"><span class="rl">Peak Rate Was</span><span class="rv">11.25% (2022)</span></div>
+    </div>
+    <div class="card">
+      <div class="ch">🇪🇺 ECB DEPOSIT RATE</div>
+      <div class="rate-big-box"><div class="rate-big">2.50%</div><div class="rate-big-sub">European Central Bank</div></div>
+      <div class="rr"><span class="rl">Next Meeting</span><span class="rv">Jun 5, 2026</span></div>
+      <div class="rr"><span class="rl">Outlook</span><span class="rv"><span class="badge by">NEUTRAL</span></span></div>
+      <div class="rr"><span class="rl">EUR/USD YTD</span><span class="rv dn">EUR −0.8%</span></div>
+    </div>
+    <div class="card">
+      <div class="ch">🇲🇽 BANXICO RATE</div>
+      <div class="rate-big-box"><div class="rate-big">9.00%</div><div class="rate-big-sub">Banco de México</div></div>
+      <div class="rr"><span class="rl">Next Meeting</span><span class="rv">Jun 26, 2026</span></div>
+      <div class="rr"><span class="rl">Market Pricing</span><span class="rv"><span class="badge bg">↓ CUT EXPECTED</span></span></div>
+      <div class="rr"><span class="rl">Peak Rate (2023)</span><span class="rv">11.25%</span></div>
+    </div>
+  </div>
+  <div class="disc">⚠ Index values & commodity prices are reference/illustrative data as of May 2026. FX rates are live via open.er-api.com. Not financial advice.</div>
+</div>
+
+<!-- ─────── US ─────── -->
+<div class="panel" id="p-us">
+  <div class="c-banner">
+    <div class="c-flag">🇺🇸</div>
+    <div class="c-info"><h2>UNITED STATES</h2><p>Federal Reserve · NYSE · NASDAQ · S&amp;P 500 · Treasuries</p></div>
+    <div class="c-kpis">
+      <div class="c-kpi"><div class="c-kpi-l">GDP (2025)</div><div class="c-kpi-v">$29.3T</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">GDP GROWTH</div><div class="c-kpi-v up">+2.1%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CPI YoY</div><div class="c-kpi-v">3.0%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">UNEMPLOYMENT</div><div class="c-kpi-v">4.2%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CREDIT RATING</div><div class="c-kpi-v up">AA+</div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div>
+      <div class="stitle">US EQUITY INDICES</div>
+      <div class="card">
+        <table class="dt">
+          <thead><tr><th>INDEX</th><th>LEVEL</th><th>CHG</th><th>CHG%</th><th>YTD%</th></tr></thead>
+          <tbody>
+            <tr><td>S&amp;P 500</td><td>5,842.65</td><td class="up">+24.31</td><td class="up">+0.42%</td><td class="up">+7.2%</td></tr>
+            <tr><td>DOW JONES</td><td>43,218.43</td><td class="up">+187.45</td><td class="up">+0.44%</td><td class="up">+4.1%</td></tr>
+            <tr><td>NASDAQ Composite</td><td>18,724.32</td><td class="up">+98.21</td><td class="up">+0.53%</td><td class="up">+9.8%</td></tr>
+            <tr><td>NASDAQ 100</td><td>20,412.88</td><td class="up">+118.44</td><td class="up">+0.58%</td><td class="up">+11.4%</td></tr>
+            <tr><td>RUSSELL 2000</td><td>2,187.44</td><td class="dn">−12.33</td><td class="dn">−0.56%</td><td class="dn">−2.3%</td></tr>
+            <tr><td>VIX (Fear Index)</td><td>16.82</td><td class="dn">−0.94</td><td class="dn">−5.29%</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sep" style="height:10px;"></div>
+      <div class="stitle">S&amp;P 500 — 6 MONTH TREND</div>
+      <div class="card"><div class="ch-box ch-lg"><canvas id="c-sp500"></canvas></div></div>
+    </div>
+    <div>
+      <div class="stitle">US ECONOMIC DASHBOARD</div>
+      <div class="card">
+        <div class="ch">FEDERAL RESERVE &amp; RATES</div>
+        <div class="rr"><span class="rl">Fed Funds Rate (Target)</span><span class="rv">4.25 – 4.50%</span></div>
+        <div class="rr"><span class="rl">10Y Treasury Yield</span><span class="rv">4.34%</span></div>
+        <div class="rr"><span class="rl">2Y Treasury Yield</span><span class="rv">4.21%</span></div>
+        <div class="rr"><span class="rl">Yield Curve (10Y−2Y)</span><span class="rv up">+13 bps (NORMAL)</span></div>
+        <div class="rr"><span class="rl">30Y Mortgage Rate</span><span class="rv">6.82%</span></div>
+        <div class="rr"><span class="rl">TIPS 10Y Real Yield</span><span class="rv up">+1.94%</span></div>
+        <div class="ch" style="margin-top:12px;">ECONOMIC INDICATORS</div>
+        <div class="rr"><span class="rl">GDP Growth Q1 2026</span><span class="rv up">+2.1% ann.</span></div>
+        <div class="rr"><span class="rl">CPI Inflation (YoY)</span><span class="rv">3.0%</span></div>
+        <div class="rr"><span class="rl">Core CPI (YoY)</span><span class="rv">3.1%</span></div>
+        <div class="rr"><span class="rl">PCE Inflation (Fed Target)</span><span class="rv">2.7%</span></div>
+        <div class="rr"><span class="rl">Unemployment Rate</span><span class="rv">4.2%</span></div>
+        <div class="rr"><span class="rl">Non-Farm Payrolls (Apr)</span><span class="rv up">+175K</span></div>
+        <div class="rr"><span class="rl">ISM Manufacturing PMI</span><span class="rv">49.8 (contraction)</span></div>
+        <div class="rr"><span class="rl">ISM Services PMI</span><span class="rv up">52.4 (expansion)</span></div>
+        <div class="rr"><span class="rl">Consumer Confidence</span><span class="rv">97.2</span></div>
+        <div class="rr"><span class="rl">Retail Sales (MoM)</span><span class="rv up">+0.6%</span></div>
+        <div class="ch" style="margin-top:12px;">FISCAL &amp; TRADE</div>
+        <div class="rr"><span class="rl">Dollar Index (DXY)</span><span class="rv">103.42</span></div>
+        <div class="rr"><span class="rl">Trade Balance</span><span class="rv dn">−$87.2B / month</span></div>
+        <div class="rr"><span class="rl">National Debt</span><span class="rv">$36.4 Trillion</span></div>
+        <div class="rr"><span class="rl">Debt-to-GDP</span><span class="rv dn">123%</span></div>
+        <div class="rr"><span class="rl">Budget Deficit/GDP</span><span class="rv dn">−6.4%</span></div>
+        <div class="rr"><span class="rl">M2 Money Supply (YoY)</span><span class="rv up">+3.8%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="stitle">S&amp;P 500 SECTOR PERFORMANCE (MTD)</div>
+  <div class="card"><div class="ch-box ch-md"><canvas id="c-sectors"></canvas></div></div>
+</div>
+
+<!-- ─────── SWITZERLAND ─────── -->
+<div class="panel" id="p-ch">
+  <div class="c-banner">
+    <div class="c-flag">🇨🇭</div>
+    <div class="c-info"><h2>SWITZERLAND</h2><p>Swiss National Bank · SIX Exchange · SMI · Swiss Franc (CHF)</p></div>
+    <div class="c-kpis">
+      <div class="c-kpi"><div class="c-kpi-l">GDP (2025)</div><div class="c-kpi-v">$907B</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">GDP GROWTH</div><div class="c-kpi-v up">+1.5%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CPI YoY</div><div class="c-kpi-v up">1.1%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">UNEMPLOYMENT</div><div class="c-kpi-v up">2.4%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CREDIT RATING</div><div class="c-kpi-v up">AAA</div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div>
+      <div class="stitle">SWISS INDICES &amp; BLUE CHIPS</div>
+      <div class="card">
+        <table class="dt">
+          <thead><tr><th>INSTRUMENT</th><th>VALUE</th><th>DAY%</th><th>YTD%</th></tr></thead>
+          <tbody>
+            <tr><td>SMI (Swiss Market Index)</td><td>12,487.3</td><td class="up">+0.31%</td><td class="up">+5.8%</td></tr>
+            <tr><td>SPI (Swiss Performance)</td><td>16,234.5</td><td class="up">+0.28%</td><td class="up">+6.2%</td></tr>
+            <tr><td>Novartis (NOVN)</td><td>CHF 97.85</td><td class="up">+0.52%</td><td class="up">+12.4%</td></tr>
+            <tr><td>UBS Group (UBSG)</td><td>CHF 28.34</td><td class="up">+1.12%</td><td class="up">+18.7%</td></tr>
+            <tr><td>Roche (ROG)</td><td>CHF 274.10</td><td class="up">+0.87%</td><td class="up">+8.1%</td></tr>
+            <tr><td>Nestlé (NESN)</td><td>CHF 96.42</td><td class="dn">−0.14%</td><td class="dn">−3.2%</td></tr>
+            <tr><td>ABB (ABBN)</td><td>CHF 52.18</td><td class="up">+0.64%</td><td class="up">+7.8%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sep" style="height:10px;"></div>
+      <div class="stitle">SMI TREND (6 MONTHS)</div>
+      <div class="card"><div class="ch-box ch-lg"><canvas id="c-smi"></canvas></div></div>
+    </div>
+    <div>
+      <div class="stitle">SWISS ECONOMIC DASHBOARD</div>
+      <div class="card">
+        <div class="ch">SWISS NATIONAL BANK (SNB)</div>
+        <div class="rr"><span class="rl">SNB Policy Rate</span><span class="rv up">0.25%</span></div>
+        <div class="rr"><span class="rl">SARON (Overnight Rate)</span><span class="rv">0.18%</span></div>
+        <div class="rr"><span class="rl">10Y Govt Bond Yield</span><span class="rv">0.51%</span></div>
+        <div class="rr"><span class="rl">FX Reserves</span><span class="rv">CHF 748 Billion</span></div>
+        <div class="rr"><span class="rl">USD/CHF (Live)</span><span class="rv" id="usdchf-val">Loading…</span></div>
+        <div class="rr"><span class="rl">EUR/CHF (Live)</span><span class="rv" id="eurchf-val">Loading…</span></div>
+        <div class="rr"><span class="rl">CLP/CHF (Live)</span><span class="rv" id="clpchf-val">Loading…</span></div>
+        <div class="ch" style="margin-top:12px;">ECONOMIC INDICATORS</div>
+        <div class="rr"><span class="rl">GDP Growth 2026F</span><span class="rv up">+1.5%</span></div>
+        <div class="rr"><span class="rl">CPI Inflation (Apr)</span><span class="rv up">1.1%</span></div>
+        <div class="rr"><span class="rl">Core CPI</span><span class="rv up">0.9%</span></div>
+        <div class="rr"><span class="rl">Unemployment</span><span class="rv up">2.4%</span></div>
+        <div class="rr"><span class="rl">Current Account/GDP</span><span class="rv up">+7.8%</span></div>
+        <div class="rr"><span class="rl">Trade Balance</span><span class="rv up">+CHF 5.2B / month</span></div>
+        <div class="rr"><span class="rl">Exports (Pharma/Watches)</span><span class="rv">CHF 264B / year</span></div>
+        <div class="rr"><span class="rl">Public Debt/GDP</span><span class="rv up">39%</span></div>
+        <div class="rr"><span class="rl">Budget Balance</span><span class="rv up">+0.8% (surplus)</span></div>
+        <div class="ch" style="margin-top:12px;">SECTOR OUTLOOK</div>
+        <div class="rr"><span class="rl">Pharmaceuticals / Biotech</span><span class="rv"><span class="badge bg">STRONG</span></span></div>
+        <div class="rr"><span class="rl">Financial Services (UBS)</span><span class="rv"><span class="badge by">RECOVERING</span></span></div>
+        <div class="rr"><span class="rl">Luxury / Watchmaking</span><span class="rv"><span class="badge by">MODERATE</span></span></div>
+        <div class="rr"><span class="rl">MedTech / Engineering</span><span class="rv"><span class="badge bg">EXPANDING</span></span></div>
+        <div class="rr"><span class="rl">Tourism</span><span class="rv"><span class="badge bg">GROWING</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────── CHILE ─────── -->
+<div class="panel" id="p-cl">
+  <div class="c-banner">
+    <div class="c-flag">🇨🇱</div>
+    <div class="c-info"><h2>CHILE</h2><p>Banco Central de Chile · Bolsa de Santiago · IPSA · CLP · Copper &amp; Lithium</p></div>
+    <div class="c-kpis">
+      <div class="c-kpi"><div class="c-kpi-l">GDP (2025)</div><div class="c-kpi-v">$344B</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">GDP GROWTH</div><div class="c-kpi-v up">+2.5%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CPI YoY</div><div class="c-kpi-v">4.5%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">UNEMPLOYMENT</div><div class="c-kpi-v">8.5%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CREDIT RATING</div><div class="c-kpi-v up">A (S&P)</div></div>
+    </div>
+  </div>
+
+  <!-- COPPER HERO -->
+  <div class="copper-box">
+    <div>
+      <div style="color:#f59e0b;font-size:10px;letter-spacing:1.5px;margin-bottom:6px;">⚡ COPPER (CMX) — CHILE'S #1 EXPORT · ~28% OF GDP LINKED TO MINING</div>
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <span class="copper-price-big">$4.52</span><span class="copper-unit">/lb</span>
+        <span class="up copper-badge">▲ +1.21%</span>
+      </div>
+      <div style="color:#666;font-size:10px;margin-top:6px;">LME: $9,963/t &nbsp;·&nbsp; YTD: <span class="up">+8.4%</span> &nbsp;·&nbsp; 52W Range: $3.82 – $5.10 &nbsp;·&nbsp; Structural bull market driven by EV + AI infrastructure demand</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="c-kpi"><div class="c-kpi-l">CODELCO OUTLOOK</div><div class="c-kpi-v"><span class="badge bg">EXPANDING</span></div></div>
+      <div class="c-kpi"><div class="c-kpi-l">GLOBAL SUPPLY SHARE</div><div class="c-kpi-v">~27%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">EV DEMAND DRIVER</div><div class="c-kpi-v up">Accelerating</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">LITHIUM (SQM)</div><div class="c-kpi-v up">Recovering</div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div>
+      <div class="stitle">CHILEAN MARKETS</div>
+      <div class="card">
+        <table class="dt">
+          <thead><tr><th>INSTRUMENT</th><th>VALUE</th><th>DAY%</th><th>YTD%</th></tr></thead>
+          <tbody>
+            <tr><td>IPSA (Benchmark)</td><td>7,512.4</td><td class="up">+0.48%</td><td class="up">+11.2%</td></tr>
+            <tr><td>USD/CLP</td><td id="cl-usdclp">955.40</td><td class="dn">−0.22%</td><td class="dn">+3.1%</td></tr>
+            <tr><td>SQM (Lithium)</td><td>CLP 42,850</td><td class="up">+2.14%</td><td class="up">+15.3%</td></tr>
+            <tr><td>Banco de Chile (CHILE)</td><td>CLP 124.50</td><td class="up">+0.81%</td><td class="up">+8.7%</td></tr>
+            <tr><td>Falabella (FALABELLA)</td><td>CLP 1,842</td><td class="dn">−0.76%</td><td class="dn">−5.2%</td></tr>
+            <tr><td>Colbún (COLBUN)</td><td>CLP 182.3</td><td class="up">+0.44%</td><td class="up">+3.8%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sep" style="height:10px;"></div>
+      <div class="stitle">COPPER PRICE — 12 MONTH TREND</div>
+      <div class="card"><div class="ch-box ch-lg"><canvas id="c-copper"></canvas></div></div>
+    </div>
+    <div>
+      <div class="stitle">CHILEAN ECONOMIC DASHBOARD</div>
+      <div class="card">
+        <div class="ch">BANCO CENTRAL DE CHILE (BCCh)</div>
+        <div class="rr"><span class="rl">TPM Policy Rate</span><span class="rv">4.75%</span></div>
+        <div class="rr"><span class="rl">Rate Trend</span><span class="rv"><span class="badge bg">↓ CUTTING CYCLE</span></span></div>
+        <div class="rr"><span class="rl">Peak Rate (2022)</span><span class="rv">11.25%</span></div>
+        <div class="rr"><span class="rl">BCP-10Y Bond Yield</span><span class="rv">5.82%</span></div>
+        <div class="rr"><span class="rl">USD/CLP (Live)</span><span class="rv" id="cl-live">Loading…</span></div>
+        <div class="rr"><span class="rl">BCCh FX Reserves</span><span class="rv">$44.3 Billion</span></div>
+        <div class="ch" style="margin-top:12px;">ECONOMIC INDICATORS</div>
+        <div class="rr"><span class="rl">GDP Growth Q1 2026</span><span class="rv up">+2.5% ann.</span></div>
+        <div class="rr"><span class="rl">CPI Inflation (Apr)</span><span class="rv">4.5%</span></div>
+        <div class="rr"><span class="rl">Core CPI</span><span class="rv">3.8%</span></div>
+        <div class="rr"><span class="rl">Unemployment (Q1)</span><span class="rv">8.5%</span></div>
+        <div class="rr"><span class="rl">Trade Balance (Mar)</span><span class="rv up">+$1.8B</span></div>
+        <div class="rr"><span class="rl">Current Account / GDP</span><span class="rv up">+1.2%</span></div>
+        <div class="rr"><span class="rl">Fiscal Deficit / GDP</span><span class="rv dn">−1.9%</span></div>
+        <div class="rr"><span class="rl">Public Debt / GDP</span><span class="rv">42%</span></div>
+        <div class="rr"><span class="rl">Copper Revenue (CODELCO)</span><span class="rv up">$11.8B (2025)</span></div>
+        <div class="ch" style="margin-top:12px;">SECTOR OUTLOOK</div>
+        <div class="rr"><span class="rl">Mining (Copper + Lithium)</span><span class="rv"><span class="badge bg">STRONG</span></span></div>
+        <div class="rr"><span class="rl">Agribusiness / Food</span><span class="rv"><span class="badge bg">GROWING</span></span></div>
+        <div class="rr"><span class="rl">Retail / Consumer</span><span class="rv"><span class="badge by">RECOVERING</span></span></div>
+        <div class="rr"><span class="rl">Real Estate</span><span class="rv"><span class="badge by">MODERATE</span></span></div>
+        <div class="rr"><span class="rl">Tech / Fintech / Startups</span><span class="rv"><span class="badge bb">EMERGING</span></span></div>
+        <div class="rr"><span class="rl">Energy (Renewables)</span><span class="rv"><span class="badge bg">EXPANDING</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────── FX ─────── -->
+<div class="panel" id="p-fx">
+  <div class="stitle"><span class="live-dot"></span>LIVE EXCHANGE RATES — USD BASE (Refreshes every 60s)</div>
+  <div id="fx-msg" style="color:#555;padding:16px 0;font-size:11px;">Fetching live rates…</div>
+  <div class="g4" id="fx-grid" style="display:none;"></div>
+
+  <div class="sep"></div>
+  <div class="stitle">FULL CROSS RATES TABLE</div>
+  <div class="card macro-wrap">
+    <table class="dt" id="fx-cross-tbl">
+      <thead><tr><th>PAIR</th><th>RATE</th><th>INVERSE</th><th>DAY CHG</th><th>YTD</th><th>1Y CHG</th><th>NOTE</th></tr></thead>
+      <tbody id="fx-cross-body"></tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+  <div class="g2">
+    <div>
+      <div class="stitle">USD/CLP — CHILEAN PESO (30 DAYS)</div>
+      <div class="card">
+        <div class="ch-box ch-lg"><canvas id="c-clp"></canvas></div>
+        <div class="rr" style="margin-top:8px;"><span class="rl">1 USD =</span><span class="rv" id="clp-disp">~955 CLP</span></div>
+        <div class="rr"><span class="rl">YTD CLP vs USD</span><span class="rv dn">CLP −3.1% (depreciation)</span></div>
+        <div class="rr"><span class="rl">BCCh 12M Range</span><span class="rv">880 – 1,020</span></div>
+        <div class="rr"><span class="rl">Sensitivity</span><span class="rv">High correlation to copper price</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="stitle">USD/CHF — SWISS FRANC (30 DAYS)</div>
+      <div class="card">
+        <div class="ch-box ch-lg"><canvas id="c-chf"></canvas></div>
+        <div class="rr" style="margin-top:8px;"><span class="rl">1 USD =</span><span class="rv" id="chf-disp">~0.892 CHF</span></div>
+        <div class="rr"><span class="rl">YTD CHF vs USD</span><span class="rv up">CHF +1.2% (appreciation)</span></div>
+        <div class="rr"><span class="rl">12M Range</span><span class="rv">0.840 – 0.956</span></div>
+        <div class="rr"><span class="rl">SNB Intervention Risk</span><span class="rv"><span class="badge by">MODERATE</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────── MACRO ─────── -->
+<div class="panel" id="p-macro">
+  <div class="stitle">MACROECONOMIC COMPARISON — US · SWITZERLAND · CHILE · MEXICO</div>
+  <div class="card macro-wrap">
+    <table class="dt" style="min-width:860px;">
+      <thead>
+        <tr><th>INDICATOR</th><th>🇺🇸 USA</th><th>🇨🇭 SWITZERLAND</th><th>🇨🇱 CHILE</th><th>🇲🇽 MEXICO</th><th>🌍 WORLD AVG</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GDP (USD)</td><td>$29.3 Trillion</td><td>$907 Billion</td><td>$344 Billion</td><td>$1.51 Trillion</td><td>—</td></tr>
+        <tr><td>GDP Growth 2026F</td><td class="up">+2.1%</td><td class="up">+1.5%</td><td class="up">+2.5%</td><td class="up">+1.8%</td><td class="up">+3.1%</td></tr>
+        <tr><td>CPI Inflation</td><td>3.0%</td><td class="up">1.1%</td><td>4.5%</td><td>4.8%</td><td>5.8%</td></tr>
+        <tr><td>Central Bank Rate</td><td>4.25%</td><td class="up">0.25%</td><td>4.75%</td><td>9.00%</td><td>—</td></tr>
+        <tr><td>10Y Govt Bond Yield</td><td>4.34%</td><td class="up">0.51%</td><td>5.82%</td><td>9.84%</td><td>—</td></tr>
+        <tr><td>10Y Real Yield</td><td class="up">+1.34%</td><td class="dn">−0.59%</td><td class="up">+1.32%</td><td class="up">+5.04%</td><td>—</td></tr>
+        <tr><td>Unemployment</td><td>4.2%</td><td class="up">2.4%</td><td>8.5%</td><td class="up">2.9%</td><td>5.1%</td></tr>
+        <tr><td>Public Debt / GDP</td><td class="dn">123%</td><td class="up">39%</td><td class="up">42%</td><td>50.2%</td><td>93%</td></tr>
+        <tr><td>Fiscal Balance / GDP</td><td class="dn">−6.4%</td><td class="up">+0.8%</td><td class="dn">−1.9%</td><td class="dn">−4.9%</td><td>—</td></tr>
+        <tr><td>Current Account / GDP</td><td class="dn">−2.9%</td><td class="up">+7.8%</td><td class="up">+1.2%</td><td class="dn">−0.9%</td><td>—</td></tr>
+        <tr><td>FX Reserves</td><td>$244B</td><td>CHF 748B</td><td>$44.3B</td><td>$226.4B</td><td>—</td></tr>
+        <tr><td>S&P Credit Rating</td><td>AA+</td><td class="up">AAA</td><td class="up">A</td><td>BBB</td><td>—</td></tr>
+        <tr><td>Ease of Doing Business</td><td>#6</td><td>#36</td><td>#59</td><td>#60</td><td>—</td></tr>
+        <tr><td>Corruption Perceptions (100=clean)</td><td>69</td><td class="up">86</td><td>67</td><td>31</td><td>43</td></tr>
+        <tr><td>Population</td><td>335M</td><td>8.8M</td><td>19.5M</td><td>130M</td><td>8.1B</td></tr>
+        <tr><td>GDP per Capita (USD)</td><td class="up">$87,500</td><td class="up">$103,000</td><td>$17,600</td><td>$11,600</td><td>$13,200</td></tr>
+        <tr><td>FDI Inflows (2025)</td><td>$349B</td><td>$88B</td><td>$12.4B</td><td class="up">$40.2B ↑</td><td>—</td></tr>
+        <tr><td>Stock Market (Benchmark)</td><td>S&P 5,843</td><td>SMI 12,487</td><td>IPSA 7,512</td><td class="up">IPC 57,482</td><td>—</td></tr>
+        <tr><td>Min. Wage / Month <span style="color:#555;font-size:10px;">(2025)</span></td><td>$1,257 <span style="color:#555;font-size:10px;">(fed.)</span></td><td>CHF 4,100 <span style="color:#555;font-size:10px;">(Geneva)</span></td><td class="up">$527</td><td>$425</td><td>~$400</td></tr>
+        <tr><td>Avg. Salary / Month <span style="color:#555;font-size:10px;">(2025)</span></td><td class="up">$5,800</td><td class="up">$7,200</td><td>$950</td><td>$780</td><td>~$1,800</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sep"></div>
+  <div class="g2">
+    <div>
+      <div class="stitle">GDP GROWTH HISTORY &amp; FORECAST</div>
+      <div class="card"><div class="ch-box ch-lg"><canvas id="c-gdp"></canvas></div></div>
+    </div>
+    <div>
+      <div class="stitle">CPI INFLATION HISTORY</div>
+      <div class="card"><div class="ch-box ch-lg"><canvas id="c-infl"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="stitle">SOVEREIGN BOND MARKET</div>
+  <div class="card macro-wrap">
+    <table class="dt" style="min-width:600px;">
+      <thead><tr><th>COUNTRY</th><th>2Y</th><th>5Y</th><th>10Y</th><th>30Y</th><th>REAL 10Y</th><th>RATING (S&P)</th></tr></thead>
+      <tbody>
+        <tr><td>🇺🇸 US Treasury</td><td>4.21%</td><td>4.28%</td><td>4.34%</td><td>4.58%</td><td class="up">+1.34%</td><td class="up">AA+</td></tr>
+        <tr><td>🇨🇭 Swiss Govt (Eidgenossen)</td><td>0.42%</td><td>0.47%</td><td>0.51%</td><td>0.78%</td><td class="dn">−0.59%</td><td class="up">AAA</td></tr>
+        <tr><td>🇨🇱 Chile Govt (BCP)</td><td>5.14%</td><td>5.48%</td><td>5.82%</td><td>6.21%</td><td class="up">+1.32%</td><td class="up">A</td></tr>
+        <tr><td>🇩🇪 German Bund</td><td>2.18%</td><td>2.41%</td><td>2.64%</td><td>2.87%</td><td class="up">+0.64%</td><td class="up">AAA</td></tr>
+        <tr><td>🇯🇵 Japan JGB</td><td>0.62%</td><td>0.91%</td><td>1.42%</td><td>2.11%</td><td class="dn">−1.58%</td><td class="up">A+</td></tr>
+        <tr><td>🇬🇧 UK Gilt</td><td>4.04%</td><td>4.32%</td><td>4.48%</td><td>4.91%</td><td class="up">+1.08%</td><td class="up">AA</td></tr>
+        <tr><td>🇲🇽 Mexico Mbono</td><td>8.92%</td><td>9.38%</td><td>9.84%</td><td>10.42%</td><td class="up">+5.04%</td><td>BBB</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─────── INSIGHTS ─────── -->
+<div class="panel" id="p-insight">
+  <div class="stitle">💡 INVESTMENT ANALYSIS &amp; STRATEGIC INSIGHTS — ANFOSSI TERMINAL</div>
+  <div style="color:#444;font-size:10px;margin-bottom:14px;letter-spacing:.5px;">Synthesized from macroeconomic data · May 2026 · Not financial advice — for strategic reference only</div>
+
+  <div class="g2">
+    <div>
+      <div class="ibox">
+        <div class="ibox-title">📈 US EQUITIES — NEUTRAL-BULLISH</div>
+        <div class="ibox-body">
+          The S&P 500 is up <strong>+7.2% YTD</strong>, led by AI/tech (NASDAQ +9.8%). The yield curve has re-normalized to +13bps, historically a positive signal. The Fed is at peak rates (4.25–4.50%) with cuts expected H2 2026 as PCE inflation approaches 2.7%.<br><br>
+          <strong>Rate cuts = tailwind for equities and bonds.</strong> When the Fed cuts, growth stocks and real estate typically benefit most. Watch June FOMC meeting for signals. VIX at 16.8 = low fear, markets complacent — watch for volatility spikes.<br><br>
+          <strong>Key risk:</strong> Sticky inflation (Core CPI 3.1%) could delay cuts and pressure multiples. US debt trajectory ($36.4T, 123% debt/GDP) is a structural concern.<br>
+          <span class="badge by">NEUTRAL-BULLISH</span> on US equities · <span class="badge bg">BULLISH</span> on US bonds if cuts materialize
+        </div>
+      </div>
+
+      <div class="ibox">
+        <div class="ibox-title">🇨🇭 SWITZERLAND — SAFE HAVEN &amp; CAPITAL PRESERVATION</div>
+        <div class="ibox-body">
+          Switzerland is the gold standard for capital preservation. AAA credit, budget surplus (+0.8% GDP), and current account surplus (+7.8% GDP) make it uniquely stable. SNB at 0.25% — CHF deposits won't yield much but protect capital in USD/EUR volatility.<br><br>
+          <strong>UBS post-Credit Suisse integration is succeeding</strong> — stock up +18.7% YTD. Novartis (+12.4%) and Roche (+8.1%) show Swiss pharma strength. SMI +5.8% YTD in a moderate growth environment.<br><br>
+          <strong>For Anfossi Terminal:</strong> Swiss-domiciled entities get access to EUR/CHF hedging, global banking, and the most stable regulatory environment in the world. CHF as reserve currency hedge.<br>
+          <span class="badge bg">BULLISH</span> CHF as hedge · <span class="badge bg">BULLISH</span> Swiss pharma sector
+        </div>
+      </div>
+
+      <div class="ibox">
+        <div class="ibox-title">🇨🇱 CHILE — COPPER BULL MARKET &amp; RATE TAILWIND</div>
+        <div class="ibox-body">
+          Chile's IPSA is <strong>+11.2% YTD</strong> — one of the best-performing EM markets globally. BCCh has cut from 11.25% to 4.75%, with further cuts likely. Falling rates = rising equity valuations and improving consumer credit.<br><br>
+          <strong>Copper ($4.52/lb) is the macro play of the decade.</strong> EV batteries, AI data center cooling, and grid infrastructure all require copper. Chile controls ~27% of global supply. Long copper = long Chile.<br><br>
+          <strong>Lithium story:</strong> Oversupply persists short-term, but SQM (+15.3%) is recovering as EV adoption accelerates. Long-term structural demand intact.<br><br>
+          <strong>Risk:</strong> CLP is volatile and tied to copper. Political risk around mining regulation. High unemployment (8.5%) limits consumer spending.<br>
+          <span class="badge bg">BULLISH</span> Copper/Mining · <span class="badge by">NEUTRAL</span> CLP · <span class="badge bg">BULLISH</span> IPSA medium-term
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="ibox">
+        <div class="ibox-title">💱 CURRENCY STRATEGY FOR ANFOSSI TERMINAL</div>
+        <div class="ibox-body">
+          <strong>USD (DXY 103.4):</strong> Moderately strong. Fed hold supports USD near-term, but rate cuts in H2 2026 could weaken it 3–5%. Good time to hold USD before cut cycle begins.<br><br>
+          <strong>CHF:</strong> Best safe-haven currency globally. SNB near-zero rates limit yield but CHF appreciates during risk-off periods. Swiss franc has strengthened +1.2% vs USD YTD.<br><br>
+          <strong>CLP:</strong> Directly correlated to copper prices. If copper holds above $4.50, CLP could strengthen toward 920 range. Avoid large CLP cash holdings beyond operational needs.<br><br>
+          <strong>Strategic playbook for Anfossi Terminal:</strong><br>
+          • <strong>Invoice US/EU clients in USD</strong> — maximum stability and global acceptance<br>
+          • <strong>Keep reserves in USD + CHF mix</strong> — 70/30 or 60/40 split for diversification<br>
+          • <strong>CLP exposure = operational only</strong> — convert excess CLP to USD promptly<br>
+          • <strong>Watch EUR/CHF</strong> at 0.94 — near-parity offers interesting conversion opportunities<br>
+          <span class="badge bb">STRATEGIC</span> USD + CHF reserve mix recommended
+        </div>
+      </div>
+
+      <div class="ibox">
+        <div class="ibox-title">⚡ COMMODITIES — STRUCTURAL OPPORTUNITIES</div>
+        <div class="ibox-body">
+          <strong>Gold ($3,085/oz — +18.2% YTD):</strong> At record highs driven by central bank buying (China, India, emerging markets) and geopolitical hedging. Key portfolio diversifier — negative correlation to equities in crisis.<br><br>
+          <strong>Copper ($4.52/lb — +8.4% YTD):</strong> Energy transition + AI infrastructure = structural demand for decades. Supply constrained by underinvestment. <span class="badge bg">STRONG BUY</span> long-term thesis.<br><br>
+          <strong>Oil (WTI $67 — −8.2% YTD):</strong> OPEC+ managing supply but global demand growth slowing. Moderate outlook. Energy transition weighing on long-term pricing.<br><br>
+          <strong>Natural Gas (+14.2% YTD):</strong> LNG demand from Europe replacing Russian supply. US gas exports surging — interesting play via US energy ETFs.<br><br>
+          <strong>Lithium (−22.1% YTD):</strong> Oversupply crushing prices short-term, but EV adoption ensures recovery 2027–2028. <span class="badge by">WAIT</span> for clearer bottom signal.
+        </div>
+      </div>
+
+      <div class="ibox">
+        <div class="ibox-title">🏢 ANFOSSI TERMINAL — BUSINESS DECISION FRAMEWORK</div>
+        <div class="ibox-body">
+          <strong>1. Pricing Power:</strong> USD strength means US/EU clients can afford your services. Price in USD to capture maximum value.<br>
+          <strong>2. Swiss Base:</strong> 0.25% SNB rates = cheapest CHF-denominated credit in the world. Swiss entity = access to institutional banking &amp; CHF financing.<br>
+          <strong>3. Chile Expansion:</strong> BCCh cutting cycle + IPSA rally = improving business confidence. Strong moment to invest in Chilean operations or client acquisition.<br>
+          <strong>4. Copper/Mining Clients:</strong> If Anfossi Terminal serves mining sector clients, Chile's copper boom creates increased tech/service demand from Codelco, Antofagasta, SQM.<br>
+          <strong>5. Working Capital:</strong> Keep 60–90 day operational expenses in CLP; excess cash in USD. Avoid CLP beyond operational needs.<br>
+          <strong>6. Financing Arbitrage:</strong> Swiss CHF credit at ~2–3% vs Chilean peso credit at 7–9%. Significant cost-of-capital advantage using Swiss entity to fund operations.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="stitle">RISK RADAR — KEY THREATS TO MONITOR</div>
+  <div class="g4">
+    <div class="risk-card" style="border-top:3px solid #ef4444;">
+      <div class="risk-title" style="color:#ef4444;">🔴 HIGH RISK</div>
+      <div class="risk-list">
+        • US fiscal trajectory ($36.4T debt, −6.4% deficit — structural<br>
+        • Geopolitical escalation (Taiwan Strait, Middle East)<br>
+        • Chile copper nationalization political debate<br>
+        • USD funding market stress / Treasury auction demand<br>
+        • SNB forced to cut to 0% (CHF appreciation risk)
+      </div>
+    </div>
+    <div class="risk-card" style="border-top:3px solid #f59e0b;">
+      <div class="risk-title" style="color:#f59e0b;">🟡 MEDIUM RISK</div>
+      <div class="risk-list">
+        • Fed holding too long → US recession 2027<br>
+        • China demand slowdown → copper price crash<br>
+        • CLP sharp depreciation if copper drops below $3.80<br>
+        • Chile political/regulatory uncertainty<br>
+        • Emerging market contagion (Argentina, Turkey risk)
+      </div>
+    </div>
+    <div class="risk-card" style="border-top:3px solid #22c55e;">
+      <div class="risk-title" style="color:#22c55e;">🟢 OPPORTUNITIES</div>
+      <div class="risk-list">
+        • Fed rate cuts → bond rally + equity upside<br>
+        • Copper structural demand (EV + AI grid)<br>
+        • Swiss pharma M&amp;A activity (Novartis, Roche)<br>
+        • Chile IPSA still undervalued vs global EM<br>
+        • Gold as portfolio hedge at $3,000+ base
+      </div>
+    </div>
+    <div class="risk-card" style="border-top:3px solid #60a5fa;">
+      <div class="risk-title" style="color:#60a5fa;">📋 WATCH LIST</div>
+      <div class="risk-list">
+        • Fed June 17–18 FOMC meeting<br>
+        • SNB June 19 policy decision<br>
+        • US Q2 GDP release (Jul 2026)<br>
+        • LME copper weekly inventory levels<br>
+        • Chile Q2 CPI print (Jul 2026)
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <div class="stitle">SUGGESTED ASSET ALLOCATION FRAMEWORK (ILLUSTRATIVE)</div>
+  <div class="card"><div class="ch-box ch-lg"><canvas id="c-alloc"></canvas></div></div>
+
+  <div class="disc">⚠ This terminal displays reference and illustrative data for strategic decision-making. Market data is approximate and should be verified against Bloomberg, Reuters, or official exchange sources before making investment decisions. Live FX rates sourced from open.er-api.com. This is not financial advice.</div>
+</div>
+
+<!-- ─────── NEWS FEED ─────── -->
+<div class="panel" id="p-news">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+    <div>
+      <div class="stitle" style="margin:0 0 4px;">📰 LIVE FINANCIAL NEWS FEED</div>
+      <div style="color:#444;font-size:10px;"><span class="live-dot"></span>Auto-refreshes every 5 min · Sources: Reuters, MarketWatch, Yahoo Finance, CNBC, Google News (MX/CL/CH/Commodities), Investing.com</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="nf-btn on" onclick="filterNews('all',this)">ALL</button>
+      <button class="nf-btn" onclick="filterNews('us',this)">🇺🇸 US</button>
+      <button class="nf-btn" onclick="filterNews('markets',this)">MARKETS</button>
+      <button class="nf-btn" onclick="filterNews('economy',this)">ECONOMY</button>
+      <button class="nf-btn" onclick="filterNews('chile',this)">🇨🇱 CHILE</button>
+      <button class="nf-btn" onclick="filterNews('mexico',this)">🇲🇽 MEXICO</button>
+      <button class="nf-btn" onclick="filterNews('switzerland',this)">🇨🇭 SWITZERLAND</button>
+      <button class="nf-btn" onclick="filterNews('commodities',this)">COMMODITIES</button>
+      <button class="nf-ref" onclick="loadAllNews()">⟳ REFRESH</button>
+    </div>
+  </div>
+
+  <div id="news-status" style="color:#555;font-size:11px;padding:8px 0;min-height:20px;"></div>
+
+  <div class="g2" id="news-main-grid">
+    <!-- Left: headline feed -->
+    <div>
+      <div style="color:#f59e0b;font-size:10px;letter-spacing:1px;margin-bottom:8px;">LATEST HEADLINES</div>
+      <div id="news-list"></div>
+    </div>
+    <!-- Right: by source -->
+    <div>
+      <div style="color:#f59e0b;font-size:10px;letter-spacing:1px;margin-bottom:8px;">BY SOURCE</div>
+      <div id="news-sources"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────── MEXICO ─────── -->
+<div class="panel" id="p-mx">
+  <div class="c-banner">
+    <div class="c-flag">🇲🇽</div>
+    <div class="c-info"><h2>MEXICO</h2><p>Banco de México (BANXICO) · Bolsa Mexicana de Valores (BMV) · IPC · MXN</p></div>
+    <div class="c-kpis">
+      <div class="c-kpi"><div class="c-kpi-l">GDP (2025)</div><div class="c-kpi-v">$1.51T</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">GDP GROWTH</div><div class="c-kpi-v up">+1.8%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CPI YoY</div><div class="c-kpi-v">4.8%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">UNEMPLOYMENT</div><div class="c-kpi-v up">2.9%</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">CREDIT RATING</div><div class="c-kpi-v">BBB (S&P)</div></div>
+    </div>
+  </div>
+
+  <!-- NEARSHORING HIGHLIGHT -->
+  <div class="copper-box" style="border-left-color:#22c55e;">
+    <div>
+      <div style="color:#22c55e;font-size:10px;letter-spacing:1.5px;margin-bottom:6px;">🏭 NEARSHORING MEGA-TREND — MEXICO AS NORTH AMERICA'S MANUFACTURING HUB</div>
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <span class="copper-price-big" style="font-size:28px;">$40B+</span>
+        <span class="copper-unit">FDI / year</span>
+        <span class="up copper-badge">▲ Record inflows</span>
+      </div>
+      <div style="color:#666;font-size:10px;margin-top:6px;">US-China decoupling → Mexico capturing manufacturing investment · USMCA advantage · #1 US trading partner since 2023 · Automotive, semiconductors, electronics leading</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="c-kpi"><div class="c-kpi-l">US TRADE SHARE</div><div class="c-kpi-v up">#1 Partner</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">USMCA STATUS</div><div class="c-kpi-v"><span class="badge bg">ACTIVE</span></div></div>
+      <div class="c-kpi"><div class="c-kpi-l">AUTOMOTIVE OUTPUT</div><div class="c-kpi-v up">4.2M vehicles/yr</div></div>
+      <div class="c-kpi"><div class="c-kpi-l">MAQUILADORA SECTOR</div><div class="c-kpi-v up">Expanding</div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div>
+      <div class="stitle">MEXICAN MARKETS (BMV)</div>
+      <div class="card">
+        <table class="dt">
+          <thead><tr><th>INSTRUMENT</th><th>VALUE</th><th>DAY%</th><th>YTD%</th></tr></thead>
+          <tbody>
+            <tr><td>IPC (BMV Benchmark)</td><td>57,482.3</td><td class="up">+0.62%</td><td class="up">+8.4%</td></tr>
+            <tr><td>USD/MXN</td><td id="mx-usdmxn">19.24</td><td class="dn">−0.18%</td><td class="dn">+2.8%</td></tr>
+            <tr><td>América Móvil (AMX)</td><td>MXN 16.42</td><td class="up">+0.73%</td><td class="up">+5.2%</td></tr>
+            <tr><td>Walmart México (WALMEX)</td><td>MXN 84.10</td><td class="up">+0.31%</td><td class="up">+9.8%</td></tr>
+            <tr><td>Grupo Femsa (FEMSA)</td><td>MXN 198.40</td><td class="dn">−0.42%</td><td class="up">+3.1%</td></tr>
+            <tr><td>Cemex (CX)</td><td>MXN 8.92</td><td class="up">+1.24%</td><td class="up">+14.7%</td></tr>
+            <tr><td>Banorte (GFNORTE)</td><td>MXN 148.30</td><td class="up">+0.58%</td><td class="up">+11.2%</td></tr>
+            <tr><td>Grupo Bimbo (BIMBO)</td><td>MXN 82.60</td><td class="dn">−0.24%</td><td class="up">+2.3%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sep" style="height:10px;"></div>
+      <div class="stitle">IPC TREND (6 MONTHS)</div>
+      <div class="card"><div class="ch-box ch-lg"><canvas id="c-ipc"></canvas></div></div>
+    </div>
+    <div>
+      <div class="stitle">MEXICAN ECONOMIC DASHBOARD</div>
+      <div class="card">
+        <div class="ch">BANCO DE MÉXICO (BANXICO)</div>
+        <div class="rr"><span class="rl">Overnight Rate (Objetivo)</span><span class="rv">9.00%</span></div>
+        <div class="rr"><span class="rl">Rate Trend</span><span class="rv"><span class="badge bg">↓ CUTTING CYCLE</span></span></div>
+        <div class="rr"><span class="rl">Peak Rate (2023)</span><span class="rv">11.25%</span></div>
+        <div class="rr"><span class="rl">10Y Mbono Yield</span><span class="rv">9.84%</span></div>
+        <div class="rr"><span class="rl">USD/MXN (Live)</span><span class="rv" id="mx-live">Loading…</span></div>
+        <div class="rr"><span class="rl">FX Reserves</span><span class="rv">$226.4 Billion</span></div>
+        <div class="ch" style="margin-top:12px;">ECONOMIC INDICATORS</div>
+        <div class="rr"><span class="rl">GDP Growth 2026F</span><span class="rv up">+1.8%</span></div>
+        <div class="rr"><span class="rl">CPI Inflation (Apr)</span><span class="rv">4.8%</span></div>
+        <div class="rr"><span class="rl">Core CPI</span><span class="rv">4.1%</span></div>
+        <div class="rr"><span class="rl">Unemployment</span><span class="rv up">2.9%</span></div>
+        <div class="rr"><span class="rl">Remittances (2025)</span><span class="rv up">$63.3B (record)</span></div>
+        <div class="rr"><span class="rl">Exports (2025)</span><span class="rv up">$593B</span></div>
+        <div class="rr"><span class="rl">Trade Balance</span><span class="rv dn">−$8.2B</span></div>
+        <div class="rr"><span class="rl">Current Account / GDP</span><span class="rv dn">−0.9%</span></div>
+        <div class="rr"><span class="rl">Fiscal Deficit / GDP</span><span class="rv dn">−4.9%</span></div>
+        <div class="rr"><span class="rl">Public Debt / GDP</span><span class="rv">50.2%</span></div>
+        <div class="rr"><span class="rl">FDI Inflows (2025)</span><span class="rv up">$40.2B (record)</span></div>
+        <div class="ch" style="margin-top:12px;">SECTOR OUTLOOK</div>
+        <div class="rr"><span class="rl">Nearshoring / Manufacturing</span><span class="rv"><span class="badge bg">BOOM</span></span></div>
+        <div class="rr"><span class="rl">Automotive (Stellantis, GM, BMW)</span><span class="rv"><span class="badge bg">STRONG</span></span></div>
+        <div class="rr"><span class="rl">Electronics / Semiconductors</span><span class="rv"><span class="badge bg">GROWING</span></span></div>
+        <div class="rr"><span class="rl">Financial Services / Fintech</span><span class="rv"><span class="badge bg">EXPANDING</span></span></div>
+        <div class="rr"><span class="rl">Retail / Consumer</span><span class="rv"><span class="badge by">MODERATE</span></span></div>
+        <div class="rr"><span class="rl">Energy (Pemex)</span><span class="rv"><span class="badge br">STRESSED</span></span></div>
+        <div class="rr"><span class="rl">Tourism</span><span class="rv"><span class="badge bg">RECORD</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────── DRONE & MOBILITY ─────── -->
+<div class="panel" id="p-drone">
+  <div style="margin-bottom:12px;">
+    <div class="stitle" style="margin:0 0 4px;">🚁 DRONE DELIVERY &amp; AUTONOMOUS MOBILITY INTELLIGENCE</div>
+  </div>
+
+  <!-- Industry snapshot cards -->
+  <div class="g5" style="margin-bottom:14px;">
+    <div class="idx-card" style="border-left:3px solid #f59e0b;">
+      <div style="font-size:18px;margin-bottom:4px;">🚁</div>
+      <div class="idx-name">DRONE DELIVERY MARKET</div>
+      <div class="idx-val" style="font-size:14px;">$8.2B</div>
+      <div class="idx-chg up">+42% CAGR to 2030</div>
+    </div>
+    <div class="idx-card" style="border-left:3px solid #60a5fa;">
+      <div style="font-size:18px;margin-bottom:4px;">🛸</div>
+      <div class="idx-name">UAM MARKET (2030F)</div>
+      <div class="idx-val" style="font-size:14px;">$30B</div>
+      <div class="idx-chg up">eVTOL wave incoming</div>
+    </div>
+    <div class="idx-card" style="border-left:3px solid #22c55e;">
+      <div style="font-size:18px;margin-bottom:4px;">🤖</div>
+      <div class="idx-name">AUTONOMOUS LOGISTICS</div>
+      <div class="idx-val" style="font-size:14px;">$88B</div>
+      <div class="idx-chg up">+23% YoY growth</div>
+    </div>
+    <div class="idx-card" style="border-left:3px solid #a78bfa;">
+      <div style="font-size:18px;margin-bottom:4px;">📦</div>
+      <div class="idx-name">LAST-MILE AUTOMATION</div>
+      <div class="idx-val" style="font-size:14px;">$24B</div>
+      <div class="idx-chg up">+31% CAGR forecast</div>
+    </div>
+    <div class="idx-card" style="border-left:3px solid #fb923c;">
+      <div style="font-size:18px;margin-bottom:4px;">🗺️</div>
+      <div class="idx-name">ACTIVE DRONE CORRIDORS</div>
+      <div class="idx-val" style="font-size:14px;">47+</div>
+      <div class="idx-chg up">Globally approved</div>
+    </div>
+  </div>
+
+  <!-- Key players tracker -->
+  <div class="stitle">KEY PLAYERS &amp; STATUS</div>
+  <div class="g3" style="margin-bottom:14px;">
+    <div class="card">
+      <div class="ch">🚁 DRONE DELIVERY LEADERS</div>
+      <div class="rr"><span class="rl"><a href="https://wing.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Wing (Alphabet)</a></span><span class="rv"><span class="badge bg">OPERATIONAL</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.amazon.com/primeair" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Amazon Prime Air</a></span><span class="rv"><span class="badge bg">SCALING</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.flyzipline.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Zipline</a></span><span class="rv"><span class="badge bg">200M+ deliveries</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.ups.com/us/en/services/transportation-services/flight-forward.page" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">UPS Flight Forward</a></span><span class="rv"><span class="badge by">EXPANDING</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.manna.aero" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Manna (Europe)</a></span><span class="rv"><span class="badge by">GROWING</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://droneup.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">DroneUp</a></span><span class="rv"><span class="badge by">WALMART PARTNER</span></span></div>
+    </div>
+    <div class="card">
+      <div class="ch">🛸 EVTOL / URBAN AIR MOBILITY</div>
+      <div class="rr"><span class="rl"><a href="https://www.jobyaviation.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Joby Aviation</a></span><span class="rv"><span class="badge bg">FAA CERT STAGE 4</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.archer.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Archer Aviation</a></span><span class="rv"><span class="badge by">FLIGHT TESTING</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://lilium.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Lilium (New)</a></span><span class="rv"><span class="badge by">REBUILDING</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://wisk.aero" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Wisk (Boeing)</a></span><span class="rv"><span class="badge by">AUTONOMOUS TEST</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.volocopter.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Volocopter</a></span><span class="rv"><span class="badge by">EU OPERATIONS</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.ehang.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">EHang (China)</a></span><span class="rv"><span class="badge bg">APPROVED + FLYING</span></span></div>
+    </div>
+    <div class="card">
+      <div class="ch">🤖 AUTONOMOUS GROUND LOGISTICS</div>
+      <div class="rr"><span class="rl"><a href="https://www.nuro.ai" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Nuro</a></span><span class="rv"><span class="badge bg">COMMERCIAL OPS</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://waymo.com/waymo-via/" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Waymo Via (Trucks)</a></span><span class="rv"><span class="badge by">TESTING</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://aurora.tech" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Aurora (Trucking)</a></span><span class="rv"><span class="badge bg">COMMERCIAL</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.starship.xyz" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Starship Robots</a></span><span class="rv"><span class="badge bg">100+ CAMPUSES</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.serverobotics.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Serve Robotics</a></span><span class="rv"><span class="badge by">LA OPERATIONS</span></span></div>
+      <div class="rr"><span class="rl"><a href="https://www.bostondynamics.com" target="_blank" style="color:#e0e0e0;text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#e0e0e0'">Boston Dynamics</a></span><span class="rv"><span class="badge bg">WAREHOUSE SCALE</span></span></div>
+    </div>
+  </div>
+
+  <!-- News sources -->
+  <div style="margin-top:14px;">
+    <div style="color:#f59e0b;font-size:10px;letter-spacing:1px;margin-bottom:10px;">📡 NEWS SOURCES</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <a href="https://dronelife.com" target="_blank" class="src-link">🚁 Dronelife</a>
+      <a href="https://www.therobotreport.com" target="_blank" class="src-link">🤖 The Robot Report</a>
+      <a href="https://www.commercialuavnews.com" target="_blank" class="src-link">🛸 Commercial UAV News</a>
+      <a href="https://www.freightwaves.com" target="_blank" class="src-link">🏭 FreightWaves</a>
+      <a href="https://techcrunch.com/category/robotics/" target="_blank" class="src-link">⚡ TechCrunch Robotics</a>
+      <a href="https://spectrum.ieee.org/robotics" target="_blank" class="src-link">🔬 IEEE Spectrum Robotics</a>
+      <a href="https://www.theverge.com/tech" target="_blank" class="src-link">📱 The Verge Tech</a>
+      <a href="https://www.wired.com/tag/drones/" target="_blank" class="src-link">💡 Wired Drones</a>
+    </div>
+  </div>
+</div>
+
+</div><!-- /panels -->
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  UTILITIES
+// ══════════════════════════════════════════════════════════
+function srand(seed){const x=Math.sin(seed+1)*10000;return x-Math.floor(x);}
+
+function genSeries(base,n,vol,trend=0,seed=42){
+  const d=[base];
+  for(let i=1;i<n;i++){
+    const r=(srand(seed*i*3.14159)-0.45)*vol;
+    d.push(+(d[i-1]+r+trend).toFixed(2));
+  }
+  return d;
+}
+
+function lastNDays(n){
+  const a=[];
+  for(let i=n-1;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    a.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  }
+  return a;
+}
+
+function lastNMonths(n){
+  const a=[];
+  for(let i=n-1;i>=0;i--){
+    const d=new Date();d.setMonth(d.getMonth()-i);
+    a.push(d.toLocaleDateString('en-US',{month:'short',year:'2-digit'}));
+  }
+  return a;
+}
+
+// ══════════════════════════════════════════════════════════
+//  CLOCKS
+// ══════════════════════════════════════════════════════════
+function tick(){
+  const now=new Date();
+  const fmt={hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false};
+  document.getElementById('t-ny').textContent=now.toLocaleString('en-US',{...fmt,timeZone:'America/New_York'});
+  document.getElementById('t-zh').textContent=now.toLocaleString('en-US',{...fmt,timeZone:'Europe/Zurich'});
+  document.getElementById('t-sc').textContent=now.toLocaleString('en-US',{...fmt,timeZone:'America/Santiago'});
+  document.getElementById('t-mx').textContent=now.toLocaleString('en-US',{...fmt,timeZone:'America/Mexico_City'});
+
+  const nyH=+now.toLocaleString('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'});
+  const nyM=+now.toLocaleString('en-US',{minute:'numeric',timeZone:'America/New_York'});
+  const day=now.toLocaleString('en-US',{weekday:'short',timeZone:'America/New_York'});
+  const weekday=!['Sat','Sun'].includes(day);
+  const open=weekday&&(nyH>9||(nyH===9&&nyM>=30))&&nyH<16;
+  const el=document.getElementById('mkt-status');
+  el.textContent=open?'⬤ US MARKETS OPEN':'◯ US MARKETS CLOSED';
+  el.style.color=open?'#22c55e':'#555';
+}
+setInterval(tick,1000);tick();
+
+// ══════════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════════
+function show(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('p-'+id).classList.add('on');
+  el.classList.add('on');
+}
+
+// ══════════════════════════════════════════════════════════
+//  MARKET DATA
+// ══════════════════════════════════════════════════════════
+const indices=[
+  {f:'🇺🇸',n:'S&P 500',   v:'5,842.65',c:'+0.42%',up:true},
+  {f:'🇺🇸',n:'NASDAQ',    v:'18,724',  c:'+0.53%',up:true},
+  {f:'🇺🇸',n:'DOW JONES', v:'43,218',  c:'+0.44%',up:true},
+  {f:'🇨🇭',n:'SMI',       v:'12,487',  c:'+0.31%',up:true},
+  {f:'🇨🇱',n:'IPSA',      v:'7,512.4', c:'+0.48%',up:true},
+  {f:'🇲🇽',n:'IPC (BMV)', v:'57,482',  c:'+0.62%',up:true},
+  {f:'🇩🇪',n:'DAX',       v:'22,841',  c:'−0.49%',up:false},
+  {f:'🇯🇵',n:'NIKKEI 225',v:'38,240',  c:'+0.48%',up:true},
+  {f:'🇬🇧',n:'FTSE 100',  v:'8,724.3', c:'+0.49%',up:true},
+  {f:'🇫🇷',n:'CAC 40',    v:'7,842.1', c:'−0.36%',up:false},
+  {f:'🇭🇰',n:'HANG SENG', v:'23,847',  c:'−0.93%',up:false},
+];
+
+const commodities=[
+  {n:'GOLD',     p:'$3,085/oz',  d:'+0.40%',ytd:'+18.2%',up:true},
+  {n:'SILVER',   p:'$32.84/oz',  d:'+1.30%',ytd:'+12.4%',up:true},
+  {n:'COPPER',   p:'$4.52/lb',   d:'+1.21%',ytd:'+8.4%', up:true},
+  {n:'WTI OIL',  p:'$67.42/bbl', d:'−1.23%',ytd:'−8.2%', up:false},
+  {n:'BRENT',    p:'$71.18/bbl', d:'−1.28%',ytd:'−7.8%', up:false},
+  {n:'NAT. GAS', p:'$2.84/MMBtu',d:'+2.90%',ytd:'+14.2%',up:true},
+  {n:'LITHIUM',  p:'$14,200/t',  d:'+0.85%',ytd:'−22.1%',up:false},
+];
+
+const tickerItems=[
+  ...indices,
+  {f:'⚡',n:'COPPER',v:'$4.52',c:'+1.21%',up:true},
+  {f:'🥇',n:'GOLD',  v:'$3,085',c:'+0.40%',up:true},
+  {f:'🛢',n:'WTI OIL',v:'$67.42',c:'−1.23%',up:false},
+  {f:'₿', n:'BTC',  v:'$96,240',c:'+2.14%',up:true},
+  {f:'💱',n:'EUR/USD',v:'1.0842',c:'−0.12%',up:false},
+  {f:'🇲🇽',n:'USD/MXN',v:'19.24', c:'+0.18%',up:false},
+];
+
+// Build index grid (show first 7: S&P, NASDAQ, DOW, SMI, IPSA, IPC, DAX)
+const grid=document.getElementById('idx-grid');
+grid.style.gridTemplateColumns='repeat(7,1fr)';
+grid.innerHTML=indices.slice(0,7).map(i=>`
+  <div class="idx-card">
+    <div class="idx-flag">${i.f}</div>
+    <div class="idx-name">${i.n}</div>
+    <div class="idx-val">${i.v}</div>
+    <div class="idx-chg ${i.up?'up':'dn'}">${i.c}</div>
+  </div>`).join('');
+
+// Build commodities table
+document.getElementById('comm-tbody').innerHTML=
+  commodities.map(c=>`<tr>
+    <td>${c.n}</td><td>${c.p}</td>
+    <td class="${c.up?'up':'dn'}">${c.d}</td>
+    <td class="${c.ytd.startsWith('+')?'up':'dn'}">${c.ytd}</td>
+  </tr>`).join('');
+
+// Build ticker
+const tHTML=tickerItems.map(i=>`
+  <div class="t-item">
+    <span class="t-sym">${i.f} ${i.n}</span>
+    <span class="t-val">${i.v}</span>
+    <span class="t-chg ${i.up?'up':'dn'}">${i.c}</span>
+  </div>`).join('');
+document.getElementById('ticker').innerHTML=tHTML+tHTML;
+
+// ══════════════════════════════════════════════════════════
+//  CHART DEFAULTS
+// ══════════════════════════════════════════════════════════
+Chart.defaults.color='#555';
+Chart.defaults.borderColor='#222';
+Chart.defaults.font.family='Courier New';
+Chart.defaults.font.size=10;
+
+const lineOpts=(extra={})=>({
+  responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:true,labels:{font:{size:9},padding:8,boxWidth:10}},...(extra.plugins||{})},
+  scales:{
+    x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{color:'#1a1a1d'}},
+    y:{ticks:{font:{size:9}},grid:{color:'#1a1a1d'}}
+  },...extra
+});
+
+// Global indexed performance chart (index all to 100)
+(()=>{
+  const days=lastNDays(30);
+  const sp=genSeries(5480,30,40,12,11);
+  const smi=genSeries(11900,30,80,19,22);
+  const ipsa=genSeries(6750,30,60,25,33);
+  const ipc=genSeries(52800,30,380,160,17);
+  // index to 100
+  const idx=s=>s.map(v=>+(v/s[0]*100).toFixed(2));
+  new Chart(document.getElementById('c-global'),{
+    type:'line',
+    data:{labels:days,datasets:[
+      {label:'S&P 500',data:idx(sp),  borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,tension:.3},
+      {label:'SMI',    data:idx(smi), borderColor:'#60a5fa',borderWidth:1.5,pointRadius:0,tension:.3},
+      {label:'IPSA',   data:idx(ipsa),borderColor:'#22c55e',borderWidth:1.5,pointRadius:0,tension:.3},
+      {label:'IPC MX', data:idx(ipc), borderColor:'#f97316',borderWidth:1.5,pointRadius:0,tension:.3},
+    ]},
+    options:{...lineOpts(),
+      scales:{
+        x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{color:'#1a1a1d'}},
+        y:{ticks:{callback:v=>v.toFixed(0),font:{size:9}},grid:{color:'#1a1a1d'}}
+      }
+    }
+  });
+})();
+
+// Commodities bar chart
+(()=>{
+  const ytds=[18.2,12.4,8.4,-8.2,-7.8,14.2,-22.1];
+  const labs=['Gold','Silver','Copper','WTI','Brent','Nat Gas','Lithium'];
+  new Chart(document.getElementById('c-comm'),{
+    type:'bar',
+    data:{labels:labs,datasets:[{
+      label:'YTD %',data:ytds,
+      backgroundColor:ytds.map(v=>v>=0?'rgba(34,197,94,.55)':'rgba(239,68,68,.55)'),
+      borderColor:ytds.map(v=>v>=0?'#22c55e':'#ef4444'),borderWidth:1
+    }]},
+    options:{...lineOpts({plugins:{legend:{display:false}}})}
+  });
+})();
+
+// S&P 500 trend
+(()=>{
+  const days=lastNDays(30);
+  const d=genSeries(5420,30,44,14,7);
+  new Chart(document.getElementById('c-sp500'),{
+    type:'line',
+    data:{labels:days,datasets:[{
+      label:'S&P 500',data:d,borderColor:'#f59e0b',borderWidth:2,
+      pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(245,158,11,.04)'
+    }]},
+    options:{...lineOpts({plugins:{legend:{display:false}}})}
+  });
+})();
+
+// US Sectors
+(()=>{
+  const labs=['Technology','Comm. Svcs','Healthcare','Financials','Industrials','Consumer Disc.','Materials','Utilities','Energy','Real Estate'];
+  const vals=[4.2,3.8,2.8,3.1,2.2,1.8,1.4,-0.7,-1.4,-1.1];
+  new Chart(document.getElementById('c-sectors'),{
+    type:'bar',
+    data:{labels:labs,datasets:[{
+      label:'MTD %',data:vals,
+      backgroundColor:vals.map(v=>v>=0?'rgba(245,158,11,.65)':'rgba(239,68,68,.6)'),
+      borderColor:vals.map(v=>v>=0?'#f59e0b':'#ef4444'),borderWidth:1
+    }]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'#1a1a1d'}},
+        y:{ticks:{font:{size:9}},grid:{color:'#1a1a1d'}}
+      }
+    }
+  });
+})();
+
+// SMI chart
+(()=>{
+  const days=lastNDays(30);
+  const d=genSeries(11750,30,90,24,55);
+  new Chart(document.getElementById('c-smi'),{
+    type:'line',
+    data:{labels:days,datasets:[{
+      label:'SMI',data:d,borderColor:'#60a5fa',borderWidth:2,
+      pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(96,165,250,.04)'
+    }]},
+    options:{...lineOpts({plugins:{legend:{display:false}}})}
+  });
+})();
+
+// Copper chart
+(()=>{
+  const months=lastNMonths(12);
+  const d=genSeries(4.08,12,.12,.04,88);
+  new Chart(document.getElementById('c-copper'),{
+    type:'line',
+    data:{labels:months,datasets:[{
+      label:'Copper $/lb',data:d,borderColor:'#f59e0b',borderWidth:2,
+      pointRadius:3,tension:.35,fill:true,backgroundColor:'rgba(245,158,11,.05)'
+    }]},
+    options:{...lineOpts({plugins:{legend:{display:false}}}),
+      scales:{
+        x:{ticks:{font:{size:9}},grid:{color:'#1a1a1d'}},
+        y:{ticks:{callback:v=>'$'+v.toFixed(2),font:{size:9}},grid:{color:'#1a1a1d'}}
+      }
+    }
+  });
+})();
+
+// CLP chart
+(()=>{
+  const days=lastNDays(30);
+  const d=genSeries(940,30,12,.5,14);
+  const clpChart=new Chart(document.getElementById('c-clp'),{
+    type:'line',
+    data:{labels:days,datasets:[{
+      label:'USD/CLP',data:d,borderColor:'#22c55e',borderWidth:2,pointRadius:0,tension:.3
+    }]},
+    options:{...lineOpts({plugins:{legend:{display:false}}})}
+  });
+})();
+
+// CHF chart
+(()=>{
+  const days=lastNDays(30);
+  const d=genSeries(.906,30,.005,-.0003,99);
+  new Chart(document.getElementById('c-chf'),{
+    type:'line',
+    data:{labels:days,datasets:[{
+      label:'USD/CHF',data:d,borderColor:'#60a5fa',borderWidth:2,pointRadius:0,tension:.3
+    }]},
+    options:{...lineOpts({plugins:{legend:{display:false}}}),
+      scales:{
+        x:{ticks:{maxTicksLimit:8,font:{size:9}},grid:{color:'#1a1a1d'}},
+        y:{ticks:{callback:v=>v.toFixed(4),font:{size:9}},grid:{color:'#1a1a1d'}}
+      }
+    }
+  });
+})();
+
+// GDP chart
+(()=>{
+  const labs=['2020','2021','2022','2023','2024','2025','2026F'];
+  new Chart(document.getElementById('c-gdp'),{
+    type:'bar',
+    data:{labels:labs,datasets:[
+      {label:'🇺🇸 USA',data:[-3.4,5.7,2.1,2.5,2.8,2.3,2.1],backgroundColor:'rgba(245,158,11,.7)',borderColor:'#f59e0b',borderWidth:1},
+      {label:'🇨🇭 CH', data:[-2.4,4.2,2.7,1.3,1.8,1.5,1.5],backgroundColor:'rgba(96,165,250,.7)',borderColor:'#60a5fa',borderWidth:1},
+      {label:'🇨🇱 CL', data:[-6.1,11.7,2.4,0.2,2.6,2.5,2.5],backgroundColor:'rgba(34,197,94,.7)',borderColor:'#22c55e',borderWidth:1},
+      {label:'🇲🇽 MX', data:[-8.6,4.8,3.9,3.2,1.5,1.5,1.8],backgroundColor:'rgba(249,115,22,.7)',borderColor:'#f97316',borderWidth:1},
+    ]},
+    options:{...lineOpts(),
+      scales:{
+        x:{ticks:{font:{size:9}},grid:{color:'#1a1a1d'}},
+        y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'#1a1a1d'}}
+      }
+    }
+  });
+})();
+
+// Inflation chart
+(()=>{
+  const labs=['2020','2021','2022','2023','2024','2025','2026F'];
+  new Chart(document.getElementById('c-infl'),{
+    type:'line',
+    data:{labels:labs,datasets:[
+      {label:'🇺🇸 USA',data:[1.2,4.7,8.0,4.1,2.9,3.2,3.0],borderColor:'#f59e0b',borderWidth:2,pointRadius:3,tension:.3},
+      {label:'🇨🇭 CH', data:[-0.7,.6,2.8,2.1,1.4,1.2,1.1],borderColor:'#60a5fa',borderWidth:2,pointRadius:3,tension:.3},
+      {label:'🇨🇱 CL', data:[3.0,7.2,13.7,8.0,4.7,4.8,4.5],borderColor:'#22c55e',borderWidth:2,pointRadius:3,tension:.3},
+      {label:'🇲🇽 MX', data:[3.4,5.7,7.9,5.5,4.6,3.8,4.8],borderColor:'#f97316',borderWidth:2,pointRadius:3,tension:.3},
+    ]},
+    options:{...lineOpts(),
+      scales:{
+        x:{ticks:{font:{size:9}},grid:{color:'#1a1a1d'}},
+        y:{ticks:{callback:v=>v+'%',font:{size:9}},grid:{color:'#1a1a1d'}}
+      }
+    }
+  });
+})();
+
+// Allocation doughnut
+(()=>{
+  new Chart(document.getElementById('c-alloc'),{
+    type:'doughnut',
+    data:{
+      labels:['US Equities (S&P/NASDAQ)','Swiss Equities (SMI)','Chilean Mining (IPSA)','Gold / Commodities','US Bonds (Treasuries)','Cash (USD + CHF)','EM / Other'],
+      datasets:[{
+        data:[32,14,12,11,20,8,3],
+        backgroundColor:['#f59e0b','#60a5fa','#22c55e','#a78bfa','#fb923c','#888','#ec4899'],
+        borderColor:'#141416',borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'right',labels:{font:{size:10},padding:10,boxWidth:12}},
+        title:{display:true,text:'ILLUSTRATIVE ALLOCATION FRAMEWORK — Adjust to your risk tolerance',color:'#555',font:{size:10}}
+      }
+    }
+  });
+})();
+
+// ══════════════════════════════════════════════════════════
+//  LIVE FX RATES
+// ══════════════════════════════════════════════════════════
+async function fetchFX(){
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    const j=await r.json();
+    if(j.result!=='success')throw new Error('API fail');
+    const rt=j.rates;
+    const chf=rt.CHF||0.892;
+    const clp=rt.CLP||955;
+    const eur=rt.EUR||0.923;
+    const gbp=rt.GBP||0.789;
+    const jpy=rt.JPY||153.4;
+    const brl=rt.BRL||5.12;
+    const cny=rt.CNY||7.24;
+    const ars=rt.ARS||900;
+
+    // Update country panels
+    document.getElementById('usdchf-val').textContent=chf.toFixed(4)+' CHF';
+    document.getElementById('eurchf-val').textContent=(chf/eur).toFixed(4)+' CHF';
+    document.getElementById('clpchf-val').textContent=(chf/clp).toFixed(6)+' CHF';
+    document.getElementById('cl-live').textContent=clp.toFixed(0)+' CLP';
+    document.getElementById('cl-usdclp').textContent=clp.toFixed(2);
+    document.getElementById('clp-disp').textContent='~'+Math.round(clp)+' CLP';
+    document.getElementById('chf-disp').textContent='~'+chf.toFixed(4)+' CHF';
+    // Mexico
+    const mxn=rt.MXN||19.24;
+    if(document.getElementById('mx-live')) document.getElementById('mx-live').textContent=mxn.toFixed(2)+' MXN';
+    if(document.getElementById('mx-usdmxn')) document.getElementById('mx-usdmxn').textContent=mxn.toFixed(2);
+
+    // FX Grid
+    const pairs=[
+      {p:'USD/CHF', r:chf,  chg:'+0.08%',up:true},
+      {p:'USD/EUR', r:eur,  chg:'−0.12%',up:false},
+      {p:'USD/CLP', r:Math.round(clp), chg:'−0.22%',up:false},
+      {p:'USD/GBP', r:gbp,  chg:'+0.14%',up:true},
+      {p:'USD/JPY', r:jpy,  chg:'−0.31%',up:false},
+      {p:'USD/BRL', r:brl,  chg:'−0.18%',up:false},
+      {p:'USD/CNY', r:cny,  chg:'+0.02%',up:true},
+      {p:'USD/ARS', r:Math.round(ars), chg:'−0.05%',up:false},
+    ];
+    const fxGrid=document.getElementById('fx-grid');
+    fxGrid.innerHTML=pairs.map(p=>`
+      <div class="fx-card">
+        <div class="fx-pair">${p.p}</div>
+        <div class="fx-rate">${typeof p.r==='number'?p.r.toFixed(['USD/CLP','USD/ARS'].includes(p.p)?0:4):p.r}</div>
+        <div class="fx-chg ${p.up?'up':'dn'}">${p.chg}</div>
+        <div style="color:#333;font-size:9px;margin-top:4px;"><span class="live-dot" style="width:5px;height:5px;"></span>LIVE</div>
+      </div>`).join('');
+    document.getElementById('fx-msg').style.display='none';
+    fxGrid.style.display='grid';
+
+    // Cross rates table
+    const cross=[
+      {p:'USD/CHF', r:chf.toFixed(4),       inv:(1/chf).toFixed(4),       d:'+0.08%',ytd:'−1.2%',y1:'+3.4%',note:'Safe Haven',dup:true,yup:false},
+      {p:'USD/EUR', r:eur.toFixed(4),       inv:(1/eur).toFixed(4),       d:'−0.12%',ytd:'+0.8%',y1:'+2.1%',note:'Reserve Currency',dup:false,yup:true},
+      {p:'USD/CLP', r:Math.round(clp),      inv:(1/clp).toFixed(6),       d:'−0.22%',ytd:'+3.1%',y1:'−5.2%',note:'Copper-correlated',dup:false,yup:true},
+      {p:'USD/GBP', r:gbp.toFixed(4),       inv:(1/gbp).toFixed(4),       d:'+0.14%',ytd:'−0.4%',y1:'+1.8%',note:'',dup:true,yup:false},
+      {p:'USD/JPY', r:jpy.toFixed(2),       inv:(1/jpy).toFixed(6),       d:'−0.31%',ytd:'+4.2%',y1:'−8.1%',note:'BoJ normalizing',dup:false,yup:true},
+      {p:'EUR/CHF', r:(chf/eur).toFixed(4), inv:(eur/chf).toFixed(4),     d:'+0.04%',ytd:'−0.3%',y1:'+1.2%',note:'SNB pivot risk',dup:true,yup:false},
+      {p:'EUR/CLP', r:Math.round(clp/eur),  inv:(eur/clp).toFixed(6),     d:'−0.34%',ytd:'+2.3%',y1:'−7.1%',note:'',dup:false,yup:true},
+      {p:'CHF/CLP', r:Math.round(clp/chf),  inv:(chf/clp).toFixed(6),     d:'−0.30%',ytd:'+4.3%',y1:'−9.5%',note:'Key for Anfossi Terminal',dup:false,yup:true},
+    ];
+    document.getElementById('fx-cross-body').innerHTML=cross.map(c=>`
+      <tr>
+        <td style="color:#f59e0b;font-weight:bold;">${c.p}</td>
+        <td>${c.r}</td>
+        <td style="color:#444;">${c.inv}</td>
+        <td class="${c.dup?'up':'dn'}">${c.d}</td>
+        <td class="${c.yup?'up':'dn'}">${c.ytd}</td>
+        <td class="${c.y1.startsWith('+')?'up':'dn'}">${c.y1}</td>
+        <td style="color:#555;font-size:10px;">${c.note}</td>
+      </tr>`).join('');
+
+  } catch(e){
+    document.getElementById('fx-msg').textContent='⚠ Live rates unavailable. Using reference data.';
+    document.getElementById('usdchf-val').textContent='~0.892 CHF';
+    document.getElementById('eurchf-val').textContent='~0.943 CHF';
+    document.getElementById('cl-live').textContent='~955 CLP';
+    document.getElementById('clp-disp').textContent='~955 CLP';
+    document.getElementById('chf-disp').textContent='~0.892 CHF';
+  }
+}
+
+fetchFX();
+setInterval(fetchFX,60000);
+
+// ── Mexico IPC chart ──
+(()=>{
+  const days=lastNDays(30);
+  const d=genSeries(52800,30,380,160,17);
+  new Chart(document.getElementById('c-ipc'),{
+    type:'line',
+    data:{labels:days,datasets:[{
+      label:'IPC (BMV)',data:d,borderColor:'#22c55e',borderWidth:2,
+      pointRadius:0,tension:.3,fill:true,backgroundColor:'rgba(34,197,94,.04)'
+    }]},
+    options:{...lineOpts({plugins:{legend:{display:false}}})}
+  });
+})();
+
+// ══════════════════════════════════════════════════════════
+//  DRONE & AUTONOMOUS MOBILITY NEWS
+// ══════════════════════════════════════════════════════════
+const DRONE_FEEDS = [
+  // droneSpecific:true → accept ALL articles (no keyword filter needed)
+  { name:'Dronelife',          url:'https://dronelife.com/feed/',                              icon:'🚁', droneSpecific:true },
+  { name:'The Robot Report',   url:'https://www.therobotreport.com/feed/',                    icon:'🤖', droneSpecific:true },
+  { name:'Commercial UAV News',url:'https://www.commercialuavnews.com/feed',                  icon:'🛸', droneSpecific:true },
+  // General tech/logistics feeds → apply keyword filter
+  { name:'TechCrunch Robotics',url:'https://techcrunch.com/category/robotics/feed/',          icon:'⚡', droneSpecific:false },
+  { name:'Freightwaves',       url:'https://www.freightwaves.com/news/feed',                  icon:'🏭', droneSpecific:false },
+  { name:'IEEE Spectrum',      url:'https://spectrum.ieee.org/feeds/feed.rss',                icon:'🔬', droneSpecific:false },
+  { name:'The Verge',          url:'https://www.theverge.com/rss/index.xml',                  icon:'📱', droneSpecific:false },
+  { name:'Wired',              url:'https://www.wired.com/feed/rss',                          icon:'💡', droneSpecific:false },
+];
+
+// Simple strings — used with .includes() so NO dots, NO regex escaping needed
+const DRONE_KEYWORDS = [
+  // Core terms
+  'drone','uav','uas','evtol','eVTOL',
+  // Mobility concepts
+  'air taxi','urban air mobility','vertiport','autonomous delivery',
+  'last-mile delivery','last mile delivery','delivery robot','delivery drone',
+  'autonomous vehicle','self-driving','autonomous truck','autonomous logistics',
+  'warehouse robot','logistics robot','logistics automation','robotic delivery',
+  'autonomous mobility','autonomous flight','cargo drone','medical drone',
+  // Companies
+  'zipline','wing delivery','amazon prime air','joby aviation','archer aviation',
+  'wisk','lilium','volocopter','starship robot','nuro','serve robotics',
+  'droneup','manna drone','aurora innovation','boston dynamics',
+  // Regulation / infra
+  'drone regulation','faa drone','bvlos','urban air','drone corridor',
+  'automated logistics','supply chain robot','agv','autonomous port',
+  // Broader but relevant
+  'unmanned aircraft','unmanned vehicle','robotics delivery','aerial vehicle',
+  'autonomous robot','delivery automation',
+];
+
+const DRONE_SUBTAGS = {
+  delivery:   ['delivery','zipline','amazon prime air','droneup','manna','nuro','starship','last-mile','last mile'],
+  uam:        ['evtol','air taxi','urban air mobility','vertiport','joby','archer','lilium','volocopter','wisk','aerial vehicle'],
+  ground:     ['autonomous truck','self-driving','ground robot','serve robot','agv','warehouse robot','aurora','boston dynamics'],
+  logistics:  ['logistics','warehouse','supply chain','freight','cargo','fulfillment','automated logistics'],
+  regulation: ['faa','regulation','bvlos','drone law','airspace','certified','approval','policy','permit'],
+};
+
+function droneMatchesKeyword(text) {
+  const t = text.toLowerCase();
+  // Simple .includes() — no dots, no regex escaping, just works
+  return DRONE_KEYWORDS.some(kw => t.includes(kw.toLowerCase()));
+}
+
+function detectDroneSubtag(text) {
+  const t = text.toLowerCase();
+  for (const [tag, words] of Object.entries(DRONE_SUBTAGS)) {
+    if (words.some(w => t.includes(w.toLowerCase()))) return tag;
+  }
+  return 'logistics';
+}
+
+let droneArticles = [];
+let droneFilter = 'all';
+
+// Parse raw RSS/Atom XML into item objects
+function parseRSSXml(xmlText) {
+  try {
+    const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+    // RSS 2.0 items
+    let els = Array.from(doc.querySelectorAll('item'));
+    // Atom entries fallback
+    if (!els.length) els = Array.from(doc.querySelectorAll('entry'));
+    return els.map(el => {
+      // link: try <link href=""> (Atom) then text content
+      let link = el.querySelector('link[href]')?.getAttribute('href')
+               || el.querySelector('link')?.textContent?.trim()
+               || el.querySelector('guid')?.textContent?.trim()
+               || '#';
+      return {
+        title:       el.querySelector('title')?.textContent?.trim() || '',
+        link,
+        pubDate:     el.querySelector('pubDate')?.textContent?.trim()
+                  || el.querySelector('published')?.textContent?.trim()
+                  || el.querySelector('updated')?.textContent?.trim() || '',
+        description: el.querySelector('description')?.textContent?.trim()
+                  || el.querySelector('summary')?.textContent?.trim()
+                  || el.querySelector('content')?.textContent?.trim() || '',
+      };
+    }).filter(i => i.title);
+  } catch(e) { return []; }
+}
+
+function mapDroneItems(rawItems, feed) {
+  const filtered = feed.droneSpecific
+    ? rawItems
+    : rawItems.filter(item => droneMatchesKeyword(item.title + ' ' + item.description));
+  return filtered.map(item => ({
+    title:   stripHtml(item.title),
+    link:    item.link || '#',
+    pubDate: item.pubDate,
+    summary: stripHtml(item.description).slice(0, 200),
+    source:  feed.name,
+    icon:    feed.icon,
+    subtag:  detectDroneSubtag(item.title + ' ' + item.description),
+  }));
+}
+
+async function fetchDroneFeed(feed) {
+  // ── Strategy 1: allorigins.win (no rate limit, parses raw XML) ──
+  try {
+    const aoUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(feed.url);
+    const r = await fetch(aoUrl, { signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.contents) {
+        const rawItems = parseRSSXml(j.contents);
+        if (rawItems.length) return mapDroneItems(rawItems, feed);
+      }
+    }
+  } catch(e) { /* fall through */ }
+
+  // ── Strategy 2: corsproxy.io ──
+  try {
+    const cpUrl = 'https://corsproxy.io/?' + encodeURIComponent(feed.url);
+    const r = await fetch(cpUrl, { signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const xmlText = await r.text();
+      const rawItems = parseRSSXml(xmlText);
+      if (rawItems.length) return mapDroneItems(rawItems, feed);
+    }
+  } catch(e) { /* fall through */ }
+
+  // ── Strategy 3: rss2json.com (fallback, rate-limited) ──
+  try {
+    const url = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feed.url) + '&count=20';
+    const r = await fetch(url, { signal: AbortSignal.timeout(9000) });
+    if (!r.ok) return [];
+    const j = await r.json();
+    if (j.status !== 'ok' || !j.items || !j.items.length) return [];
+    const items = feed.droneSpecific
+      ? j.items
+      : j.items.filter(item => droneMatchesKeyword(item.title + ' ' + (item.description||'')));
+    return items.map(item => ({
+      title:   stripHtml(item.title),
+      link:    item.link || '#',
+      pubDate: item.pubDate,
+      summary: stripHtml(item.description).slice(0, 200),
+      source:  feed.name,
+      icon:    feed.icon,
+      subtag:  detectDroneSubtag(item.title + ' ' + (item.description||'')),
+    }));
+  } catch(e) { return []; }
+}
+
+function renderDroneNews() {
+  const filtered = droneFilter === 'all'
+    ? droneArticles
+    : droneArticles.filter(a => a.subtag === droneFilter);
+
+  const subtag_colors = {delivery:'#f59e0b',uam:'#60a5fa',ground:'#22c55e',logistics:'#a78bfa',regulation:'#fb923c'};
+
+  const listEl = document.getElementById('drone-list');
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="news-spinner">No articles found — try a different filter or refresh.</div>';
+  } else {
+    listEl.innerHTML = filtered.slice(0,30).map(a=>`
+      <div class="news-card" style="border-left-color:${subtag_colors[a.subtag]||'#f59e0b'}" onclick="window.open('${a.link}','_blank')">
+        <div class="news-title">${a.title}</div>
+        <div class="news-meta">
+          <span class="news-source">${a.icon} ${a.source}</span>
+          <span class="news-time">${timeAgo(a.pubDate)}</span>
+          <span class="news-tag" style="background:rgba(0,0,0,.3);color:${subtag_colors[a.subtag]||'#f59e0b'}">${(a.subtag||'').toUpperCase()}</span>
+        </div>
+        ${a.summary?`<div class="news-summary">${a.summary}</div>`:''}
+      </div>`).join('');
+  }
+
+  // By source
+  const srcEl = document.getElementById('drone-sources');
+  const bySource = {};
+  filtered.forEach(a => { if(!bySource[a.source]) bySource[a.source]=[]; bySource[a.source].push(a); });
+  srcEl.innerHTML = Object.entries(bySource).map(([src,arts])=>`
+    <div class="src-block">
+      <div class="src-name">${arts[0].icon} ${src.toUpperCase()}</div>
+      ${arts.slice(0,5).map(a=>`
+        <div class="src-item" onclick="window.open('${a.link}','_blank')">
+          <div class="src-headline">${a.title}</div>
+          <div class="src-when">${timeAgo(a.pubDate)}</div>
+        </div>`).join('')}
+    </div>`).join('')
+    || `<div class="src-block">
+          <div class="src-name">📡 DIRECT LINKS</div>
+          ${[['Dronelife','https://dronelife.com'],['The Robot Report','https://www.therobotreport.com'],
+             ['Commercial UAV News','https://www.commercialuavnews.com'],['Freightwaves','https://www.freightwaves.com'],
+             ['TechCrunch Robotics','https://techcrunch.com/category/robotics/'],
+             ['IEEE Spectrum Robotics','https://spectrum.ieee.org/robotics']
+            ].map(([l,u])=>`<div class="src-item" onclick="window.open('${u}','_blank')"><div class="src-headline" style="color:#f59e0b;">↗ ${l}</div></div>`).join('')}
+        </div>`;
+}
+
+async function loadDroneNews() {
+  const statusEl = document.getElementById('drone-status');
+  document.getElementById('drone-list').innerHTML='<div class="news-spinner">⟳ Scanning drone &amp; mobility sources…</div>';
+  document.getElementById('drone-sources').innerHTML='';
+  statusEl.textContent='Fetching from '+DRONE_FEEDS.length+' sources and filtering for drone/mobility content…';
+
+  const results = await Promise.allSettled(DRONE_FEEDS.map(f=>fetchDroneFeed(f)));
+  droneArticles = [];
+  let loaded=0;
+  results.forEach(r=>{ if(r.status==='fulfilled'&&r.value.length){droneArticles.push(...r.value);loaded++;} });
+  droneArticles.sort((a,b)=>new Date(b.pubDate)-new Date(a.pubDate));
+
+  const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  statusEl.textContent=droneArticles.length
+    ? `✓ ${droneArticles.length} drone/mobility articles from ${loaded}/${DRONE_FEEDS.length} sources · ${now}`
+    : '⚠ No live articles loaded — showing direct links below.';
+  renderDroneNews();
+}
+
+function filterDrone(tag, btn) {
+  droneFilter = tag;
+  document.querySelectorAll('.nf-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderDroneNews();
+}
+
+// Auto-refresh drone news every 5 min if tab is open
+setInterval(()=>{
+  if(document.getElementById('p-drone').classList.contains('on')) loadDroneNews();
+},300000);
+
+// ══════════════════════════════════════════════════════════
+//  NEWS FEED
+// ══════════════════════════════════════════════════════════
+const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
+
+const FEEDS = [
+  // ── United States ──
+  { name:'Reuters Business',   url:'https://feeds.reuters.com/reuters/businessNews',                                                                          tag:'us',      icon:'🌐' },
+  { name:'MarketWatch',        url:'https://feeds.marketwatch.com/marketwatch/topstories/',                                                                   tag:'us',      icon:'📈' },
+  { name:'Yahoo Finance',      url:'https://finance.yahoo.com/rss/topstories',                                                                                tag:'us',      icon:'💹' },
+  { name:'CNBC Finance',       url:'https://www.cnbc.com/id/10000664/device/rss/rss.html',                                                                   tag:'us',      icon:'📺' },
+  { name:'Investing.com',      url:'https://www.investing.com/rss/news.rss',                                                                                  tag:'us',      icon:'💰' },
+  { name:'Google News US',     url:'https://news.google.com/rss/search?q=US+economy+wall+street+federal+reserve+nasdaq+dow+jones&hl=en-US&gl=US&ceid=US:en', tag:'us',      icon:'🇺🇸' },
+
+  // ── Switzerland ──
+  { name:'SwissInfo Economy', url:'https://www.swissinfo.ch/eng/rss/economy',              tag:'switzerland', icon:'🇨🇭' },
+  { name:'Google News CH',    url:'https://news.google.com/rss/search?q=switzerland+economy+SNB+franc+UBS&hl=en-US&gl=US&ceid=US:en', tag:'switzerland', icon:'🇨🇭' },
+
+  // ── Mexico — Google News RSS (reliable, no API key) ──
+  { name:'Google News MX',    url:'https://news.google.com/rss/search?q=mexico+economia+peso+banxico+finanzas&hl=es-419&gl=MX&ceid=MX:es-419', tag:'mexico', icon:'🇲🇽' },
+  { name:'Google News MX EN', url:'https://news.google.com/rss/search?q=mexico+economy+peso+banxico+nearshoring&hl=en-US&gl=US&ceid=US:en',    tag:'mexico', icon:'🇲🇽' },
+  { name:'El Economista MX',  url:'https://www.eleconomista.com.mx/rss/finanzas.xml',      tag:'mexico',      icon:'🇲🇽' },
+
+  // ── Chile — Google News RSS ──
+  { name:'Google News CL',    url:'https://news.google.com/rss/search?q=chile+economia+peso+cobre+codelco&hl=es-419&gl=CL&ceid=CL:es-419',     tag:'chile', icon:'🇨🇱' },
+  { name:'Google News CL EN', url:'https://news.google.com/rss/search?q=chile+economy+copper+IPSA+peso+lithium&hl=en-US&gl=US&ceid=US:en',     tag:'chile', icon:'🇨🇱' },
+  { name:'Emol Economía',     url:'https://www.emol.com/rss/Noticias/rss_noticias_mundo_economico.xml',                                          tag:'chile', icon:'🇨🇱' },
+
+  // ── Commodities — dedicated Google News search ──
+  { name:'Google Commodities', url:'https://news.google.com/rss/search?q=gold+oil+copper+silver+commodities+prices&hl=en-US&gl=US&ceid=US:en', tag:'commodities', icon:'⚡' },
+  { name:'CNBC Commodities',   url:'https://www.cnbc.com/id/100727362/device/rss/rss.html',                                                      tag:'commodities', icon:'🛢️' },
+];
+
+let allArticles = [];
+let activeFilter = 'all';
+
+// Keyword → category tag detection
+// sourcetag forces the tag for dedicated feeds
+function detectTag(title, desc, sourcetag) {
+  // Dedicated-source tags take priority — trust the feed
+  if (sourcetag === 'us')          return 'us';
+  if (sourcetag === 'switzerland') return 'switzerland';
+  if (sourcetag === 'chile')       return 'chile';
+  if (sourcetag === 'mexico')      return 'mexico';
+  if (sourcetag === 'commodities') return 'commodities';
+
+  const t = (title + ' ' + (desc||'')).toLowerCase();
+
+  // Country detection (broader patterns)
+  if (/\bmexico\b|mexican|banxico|bmv\b|ipc\b|peso mexicano|\bmxn\b|nearshoring|pemex|sheinbaum|usmca|monterrey|guadalajara|cdmx/.test(t)) return 'mexico';
+  if (/\bchile\b|chilean|chileno|ipsa\b|codelco|sqm\b|\bclp\b|boric|atacama|antofagasta|santiago stock/.test(t)) return 'chile';
+  if (/switzerland|swiss|\bsnb\b|\bchf\b|zurich|zürich|\bubs\b|novartis|\broche\b|davos|helvetia/.test(t)) return 'switzerland';
+
+  // Commodities (broad — energy, metals, agriculture)
+  if (/\bgold\b|\bsilver\b|\bcopper\b|\boil\b|\bcrude\b|brent|wti|natural gas|lng\b|gasoline|platinum|palladium|commodity|commodities|\bwheat\b|\bcorn\b|soybean|iron ore|coal\b|lithium|uranium/.test(t)) return 'commodities';
+
+  // Economy / macro
+  if (/\bfed\b|federal reserve|inflation|deflation|\bgdp\b|interest rate|unemployment|treasury|recession|central bank|\bimf\b|world bank|monetary policy|cpi\b|ppi\b/.test(t)) return 'economy';
+
+  return 'markets';
+}
+
+function timeAgo(dateStr) {
+  try {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 60000;
+    if (diff < 2) return 'just now';
+    if (diff < 60) return Math.floor(diff) + 'm ago';
+    if (diff < 1440) return Math.floor(diff/60) + 'h ago';
+    return Math.floor(diff/1440) + 'd ago';
+  } catch(e) { return ''; }
+}
+
+function stripHtml(html) {
+  return (html||'').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+}
+
+async function fetchFeed(feed) {
+  // Strategy 1: allorigins.win
+  try {
+    const aoUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(feed.url);
+    const r = await fetch(aoUrl, { signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const j = await r.json();
+      if (j.contents) {
+        const rawItems = parseRSSXml(j.contents);
+        if (rawItems.length) return rawItems.slice(0,10).map(item => ({
+          title:   stripHtml(item.title),
+          link:    item.link || '#',
+          pubDate: item.pubDate,
+          summary: stripHtml(item.description).slice(0, 180),
+          source:  feed.name,
+          icon:    feed.icon,
+          tag:     detectTag(item.title, item.description, feed.tag)
+        }));
+      }
+    }
+  } catch(e) { /* fall through */ }
+
+  // Strategy 2: corsproxy.io
+  try {
+    const cpUrl = 'https://corsproxy.io/?' + encodeURIComponent(feed.url);
+    const r = await fetch(cpUrl, { signal: AbortSignal.timeout(9000) });
+    if (r.ok) {
+      const rawItems = parseRSSXml(await r.text());
+      if (rawItems.length) return rawItems.slice(0,10).map(item => ({
+        title:   stripHtml(item.title),
+        link:    item.link || '#',
+        pubDate: item.pubDate,
+        summary: stripHtml(item.description).slice(0, 180),
+        source:  feed.name,
+        icon:    feed.icon,
+        tag:     detectTag(item.title, item.description, feed.tag)
+      }));
+    }
+  } catch(e) { /* fall through */ }
+
+  // Strategy 3: rss2json.com (fallback)
+  try {
+    const url = RSS2JSON + encodeURIComponent(feed.url) + '&count=10';
+    const r = await fetch(url, { signal: AbortSignal.timeout(9000) });
+    const j = await r.json();
+    if (j.status !== 'ok' || !j.items) return [];
+    return j.items.map(item => ({
+      title:   stripHtml(item.title),
+      link:    item.link,
+      pubDate: item.pubDate,
+      summary: stripHtml(item.description).slice(0, 180),
+      source:  feed.name,
+      icon:    feed.icon,
+      tag:     detectTag(item.title, item.description, feed.tag)
+    }));
+  } catch(e) { return []; }
+}
+
+function renderNews() {
+  const filtered = activeFilter === 'all'
+    ? allArticles
+    : allArticles.filter(a => a.tag === activeFilter);
+
+  // Left column: headline list
+  const listEl = document.getElementById('news-list');
+  if (!filtered.length) {
+    listEl.innerHTML = '<div class="news-spinner">No articles found for this filter.</div>';
+  } else {
+    listEl.innerHTML = filtered.slice(0, 30).map(a => `
+      <div class="news-card ${a.tag}" onclick="window.open('${a.link}','_blank')">
+        <div class="news-title">${a.title}</div>
+        <div class="news-meta">
+          <span class="news-source">${a.icon} ${a.source}</span>
+          <span class="news-time">${timeAgo(a.pubDate)}</span>
+          <span class="news-tag">${a.tag.toUpperCase()}</span>
+        </div>
+        ${a.summary ? `<div class="news-summary">${a.summary}</div>` : ''}
+      </div>`).join('');
+  }
+
+  // Right column: grouped by source
+  const srcEl = document.getElementById('news-sources');
+  const bySource = {};
+  filtered.forEach(a => {
+    if (!bySource[a.source]) bySource[a.source] = [];
+    bySource[a.source].push(a);
+  });
+  srcEl.innerHTML = Object.entries(bySource).map(([src, arts]) => `
+    <div class="src-block">
+      <div class="src-name">${arts[0].icon} ${src.toUpperCase()}</div>
+      ${arts.slice(0,5).map(a=>`
+        <div class="src-item" onclick="window.open('${a.link}','_blank')">
+          <div class="src-headline">${a.title}</div>
+          <div class="src-when">${timeAgo(a.pubDate)}</div>
+        </div>`).join('')}
+    </div>`).join('') || '<div style="color:#444;font-size:11px;padding:10px;">No articles for this filter.</div>';
+}
+
+async function loadAllNews() {
+  const statusEl = document.getElementById('news-status');
+  document.getElementById('news-list').innerHTML = '<div class="news-spinner">⟳ Loading news feeds…</div>';
+  document.getElementById('news-sources').innerHTML = '';
+  statusEl.textContent = 'Fetching from ' + FEEDS.length + ' sources…';
+
+  const results = await Promise.allSettled(FEEDS.map(f => fetchFeed(f)));
+  allArticles = [];
+  let loaded = 0;
+  results.forEach(r => {
+    if (r.status === 'fulfilled' && r.value.length) {
+      allArticles.push(...r.value);
+      loaded++;
+    }
+  });
+
+  // Sort by date descending
+  allArticles.sort((a,b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+  if (!allArticles.length) {
+    statusEl.innerHTML = '⚠ Could not load live feeds — check your internet connection. <a href="https://www.reuters.com/business/" target="_blank" style="color:#f59e0b;">Open Reuters ↗</a>';
+    document.getElementById('news-list').innerHTML = `
+      <div class="src-block">
+        <div class="src-name">QUICK LINKS — FINANCIAL NEWS</div>
+        ${[
+          ['Reuters Business','https://www.reuters.com/business/'],
+          ['MarketWatch','https://www.marketwatch.com/'],
+          ['Bloomberg','https://www.bloomberg.com/markets'],
+          ['CNBC Finance','https://www.cnbc.com/finance/'],
+          ['Financial Times','https://www.ft.com/'],
+          ['SwissInfo Economy','https://www.swissinfo.ch/eng/economy'],
+          ['🇨🇱 Emol Economía','https://www.emol.com/noticias/Economia/'],
+          ['🇨🇱 La Tercera Negocios','https://www.latercera.com/negocios/'],
+          ['🇨🇱 Diario Financiero','https://www.df.cl/'],
+          ['🇨🇱 Bolsa de Santiago','https://www.bolsadesantiago.com/'],
+          ['🇨🇱 BioBio Economía','https://www.biobiochile.cl/noticias/economia/'],
+        ].map(([label,url])=>`
+          <div class="src-item" onclick="window.open('${url}','_blank')">
+            <div class="src-headline" style="color:#f59e0b;">↗ ${label}</div>
+          </div>`).join('')}
+      </div>`;
+    return;
+  }
+
+  const now = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  statusEl.textContent = `✓ ${allArticles.length} articles loaded from ${loaded}/${FEEDS.length} sources · Last updated ${now}`;
+  renderNews();
+}
+
+function filterNews(tag, btn) {
+  activeFilter = tag;
+  document.querySelectorAll('.nf-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderNews();
+}
+
+// Load news when tab is first opened (lazy load)
+let newsLoaded = false;
+const origShow = window.show || function(){};
+window.show = function(id, el) {
+  origShow(id, el);
+  if (id === 'news' && !newsLoaded) {
+    newsLoaded = true;
+    loadAllNews();
+  }
+};
+
+// Override show function (defined below, so we patch after definition)
+document.querySelectorAll('.tab').forEach(t => {
+  const orig = t.getAttribute('onclick');
+  if (orig && orig.includes("'news'")) {
+    t.setAttribute('onclick', `show('news',this);if(!window._newsLoaded){window._newsLoaded=true;loadAllNews();}`);
+  }
+});
+
+// Auto-refresh news every 5 minutes if tab is open
+setInterval(() => {
+  if (document.getElementById('p-news').classList.contains('on')) loadAllNews();
+}, 300000);
+</script>
+</body>
+</html>
